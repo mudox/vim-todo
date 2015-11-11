@@ -1,5 +1,5 @@
 " vim: fdm=marker
-" TODO!!: make it a plugin
+" TODO!!!: make it a plugin
 scriptencoding utf8
 
 let g:items = []
@@ -146,13 +146,15 @@ function! s:change_priority(delta)                                    " {{{1
   execute printf('normal! %dzz', linenr + 1)
 
   " apply the change back to buffer
-  mark Y
+  let pos = [0, line('.'), col('.'), 0]
   execute 'edit ' . item.fname
   let line = getline(item.linenr)
   let line = substitute(line, item.title . '\zs.\{-}\ze:',
         \ item.priority[1:], '')
+
+  execute printf('bnext %s', s:bufnr)
   call setline(item.linenr, line)
-  normal! g`Y
+  call setpos('.', pos)
 endfunction "  }}}1
 
 function! s:show()                                                    " {{{1
@@ -179,6 +181,7 @@ function! s:show()                                                    " {{{1
   endfor
 
   tab drop todo\ list
+  let s:bufnr = bufnr('')
   " TODO!!: move buffter settings to under /ftplugin
   setlocal buftype=nofile
   "setlocal bufhidden=wipe
@@ -189,7 +192,7 @@ function! s:show()                                                    " {{{1
   nnoremap <silent><buffer> + :<C-U>call <SID>change_priority(1)<Cr>
   nnoremap <silent><buffer> R :<C-U>call <SID>refresh()<Cr>
   " TODO!: mapping <C-N/P> to navigating
-  " TODO: mapping o toggle folding
+  " TODO!: mapping o toggle folding
 
 
   " TODO!: move syntax settings to under /syntax
