@@ -167,6 +167,7 @@ function! s:change_priority(delta)                                    " {{{1
   " update view
   call s:show()
 
+  " cursor follow the changed line
   let line_pat = s:item_line(item)
   let linenr = index(getline(1, '$'), line_pat)
   execute printf('normal! %dzz', linenr + 1)
@@ -178,7 +179,7 @@ function! s:change_priority(delta)                                    " {{{1
   let line = substitute(line, item.title . '\zs.\{-}\ze:',
         \ item.priority[1:], '')
 
-  execute printf('bnext %s', s:bufnr)
+  execute printf('buffer! %s', s:bufnr)
   call setline(item.linenr, line)
   call setpos('.', pos)
 endfunction "  }}}1
@@ -208,7 +209,7 @@ function! s:show()                                                    " {{{1
 
   tab drop todo\ list
   let s:bufnr = bufnr('')
-  " TODO!!!: move buffter settings to under /ftplugin
+  " TODO!!: move buffter settings to under /ftplugin
   setlocal buftype=nofile
 
   " mappings
