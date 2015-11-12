@@ -68,7 +68,7 @@ function! s:handle_file()                                             " {{{1
   execute 'g/' . s:pattern . '/call s:pick()'
 endfunction "  }}}1
 
-function! s:sort_items()                                              " {{{1
+function! s:sort_items()                                                            " {{{1
   function! s:sort_by_priority(l, r)
     let left = a:l.priority
     let right = a:r.priority
@@ -144,13 +144,13 @@ function! s:on_enter()                                                " {{{1
   silent! normal! zO
 endfunction "  }}}1
 
-function! s:refresh()                                                 " {{{1
+function! s:refresh()                                                               " {{{1
   let pos = getcurpos()
   call MakeToDo()
   call setpos('.', pos)
 endfunction "  }}}1
 
-function! s:change_priority(delta)                                    " {{{1
+function! s:change_priority(delta)                                                  " {{{1
   let item = s:line2item()
   if empty(item)
     "call setpos('.', pos)
@@ -240,15 +240,16 @@ function! s:show()                                                    " {{{1
         \ '\=printf("%x", "0x". submatch(0) - 0x25)', 'g')
   silent execute printf('highlight todoNormal guifg=%s', fg)
 
+  " ISSUE!: magic symbol here, remove them all
   call matchadd('todoHigh', '  .*$')
   call matchadd('todoMedium', '  .*$')
   call matchadd('todoLow', '  .*$')
   call matchadd('todoNormal', '^ \{9}\zs.*$')
 
-  call matchadd('Keyword','└ .*$')
-  call matchadd('Comment','└\| ┐')
-  call matchadd('String', ' ┐\zs.*$')
-  call matchadd('SpecialChar', '')
+  call matchadd('Keyword','└\zs.*$')
+  call matchadd('Comment','└\|┐', 100)
+  call matchadd('String', s:file_line_prefix . '.\zs.*$')
+  call matchadd('Type', s:file_line_prefix)
 
   setlocal modifiable
   %d_
@@ -257,27 +258,29 @@ function! s:show()                                                    " {{{1
   normal! 1G
 endfunction "  }}}1
 
-function! s:file_line(fname, folded)                                  " {{{1
-  let s:file_line_prefix = '.*┐'
+function! s:file_line(fname, folded)                                                " {{{1
+  let s:file_line_prefix = printf(' \(%s\|%s\)', s:symbol.folded, s:symbol.unfolded)
 
   "if exists('*WebDevIconsGetFileTypeSymbol')
-    "let ft_symbol = WebDevIconsGetFileTypeSymbol(a:fname)
+  "let ft_symbol = WebDevIconsGetFileTypeSymbol(a:fname)
   "else
-    "let ft_symbol = ''
+  "let ft_symbol = ''
   "end
 
-  return printf(' %s ┐%s',
+  let node = (a:folded == 'folded') ? ' ' : '┐'
+  return printf(' %s %s%s',
         \ s:symbol[a:folded],
+        \ node,
         \ a:fname,
         \ )
 endfunction "  }}}1
 
-function! s:title_line(title)                                         " {{{1
+function! s:title_line(title)                                                       " {{{1
   let s:title_line_prefix = '   └'
   return printf('%s %s:', s:title_line_prefix, a:title)
 endfunction "  }}}1
 
-function! s:item_line(item)                                           " {{{1
+function! s:item_line(item)                                                         " {{{1
   let max_text_width = 62
   if len(a:item.text) > max_text_width
     let text = a:item.text[:55] . ' ...'
@@ -294,7 +297,7 @@ function! s:item_line(item)                                           " {{{1
         \ )
 endfunction "  }}}1
 
-function! s:update_items()                                            " {{{1
+function! s:update_items()                                                          " {{{1
   " IDEA!!!: the bufdo & argdo may not be the efficient way
   " IDEA: can tab drop here
   " ISSUE: is this marking way robust?
@@ -306,7 +309,7 @@ function! s:update_items()                                            " {{{1
   normal! g`Y
 endfunction "  }}}1
 
-function! g:MakeToDo()                                                " {{{1
+function! g:MakeToDo()                                                              " {{{1
   call s:update_items()
   call s:show()
 endfunction "  }}}1
