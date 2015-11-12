@@ -119,7 +119,8 @@ function! s:line2item()                                               " {{{1
   for nr in range(line('.'), 1, -1)
     if s:is_file_line(getline(nr))
       " ISSUE: magic number for prefixing bytes
-      let fname = strpart(getline(nr), 15)
+      let fname = substitute(getline(nr), '^.*┐', '', '')
+      break
     endif
   endfor
 
@@ -259,15 +260,14 @@ endfunction "  }}}1
 function! s:file_line(fname, folded)                                  " {{{1
   let s:file_line_prefix = '.*┐'
 
-  if exists('*WebDevIconsGetFileTypeSymbol')
-    let ft_symbol = WebDevIconsGetFileTypeSymbol(a:fname)
-  else
-    let ft_symbol = ''
-  end
+  "if exists('*WebDevIconsGetFileTypeSymbol')
+    "let ft_symbol = WebDevIconsGetFileTypeSymbol(a:fname)
+  "else
+    "let ft_symbol = ''
+  "end
 
-  return printf(' %s ┐ %s %s',
+  return printf(' %s ┐%s',
         \ s:symbol[a:folded],
-        \ ft_symbol,
         \ a:fname,
         \ )
 endfunction "  }}}1
@@ -285,7 +285,7 @@ function! s:item_line(item)                                           " {{{1
     let text = a:item.text
   endif
 
-  let s:item_line_prefix = repeat("\x20", 5)
+  let s:item_line_prefix = repeat("\x20", 6)
   return printf('%s%s %-' . max_text_width . 's %s',
         \ s:item_line_prefix,
         \ s:symbol[a:item.priority],
