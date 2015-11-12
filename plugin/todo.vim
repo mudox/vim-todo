@@ -2,9 +2,6 @@
 " TODO!!!: make it a plugin
 scriptencoding utf8
 
-let g:items = []
-let s:files = []
-
 " TODO: need a fallback suite of symbols
 " TODO: need to honor user's choice
 let s:symbol = {
@@ -31,7 +28,6 @@ function! s:line2fname(lnum)                                                    
 endfunction " }}}1
 
 function! s:on_on()                                                                  " {{{1
-  " TODO: implement s:on_on()
   let pos = [0, line('.'), col('.'), 0]
 
   let line = getline('.')
@@ -160,9 +156,6 @@ function! s:sort_items()                                                        
 endfunction "  }}}1
 
 function! s:nav_section(dir)                                                         " {{{1
-  " TODO: implement s:nav_section()
-  " a:dir: -1 for navigate up, 1 for navigate down
-
   if a:dir == -1
     let lnum = search(s:file_line_prefix, 'Wb')
     let lnum = search(s:file_line_prefix, 'Wb')
@@ -357,7 +350,7 @@ function! s:show(...)                                                           
         \ '\=printf("%x", "0x". submatch(0) - 0x25)', 'g')
   silent execute printf('highlight todoNormal guifg=%s', fg)
 
-  " ISSUE!: magic symbol here, remove them all
+  " ISSUE!!: magic symbol here, remove them all
   call matchadd('todoHigh', '  .*$')
   call matchadd('todoMedium', '  .*$')
   call matchadd('todoLow', '  .*$')
@@ -377,12 +370,6 @@ endfunction "  }}}1
 
 function! s:file_line(fname, folded)                                                 " {{{1
   let s:file_line_prefix = printf(' \(%s\|%s\)', s:symbol.folded, s:symbol.unfolded)
-
-  "if exists('*WebDevIconsGetFileTypeSymbol')
-  "let ft_symbol = WebDevIconsGetFileTypeSymbol(a:fname)
-  "else
-  "let ft_symbol = ''
-  "end
 
   let node = (a:folded == 'folded') ? ' ' : '┐'
   return printf(' %s %s%s',
@@ -415,16 +402,17 @@ function! s:item_line(item)                                                     
 endfunction "  }}}1
 
 function! s:update_items()                                                           " {{{1
+  let s:files = []
+  let g:items = []
   " IDEA!!!: the bufdo & argdo may not be the efficient way
   " IDEA!: study other todo plugin to see how them parsing & collect items
-  " IDEA: can tab drop here
   " ISSUE: is this marking way robust?
-  mark Y
+  let bufnr = bufnr('')
   silent bufdo call s:handle_file()
   if argc() > 0
     silent argdo call s:handle_file()
   endif
-  normal! g`Y
+  execute printf('buffer %d', bufnr)
 endfunction "  }}}1
 
 function! g:MakeToDo()                                                               " {{{1
