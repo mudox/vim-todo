@@ -62,6 +62,8 @@ function! s:on_on()                                                             
     call append('.', lines)
     setlocal nomodifiable
 
+    call setpos('.', pos)
+
   elseif line =~ s:symbol.unfolded || s:is_title_line(line) || s:is_item_line(line)
 
     " fold section
@@ -85,9 +87,9 @@ function! s:on_on()                                                             
     call setline(start_nr - 1, s:file_line(fname, 'folded'))
     setlocal nomodifiable
 
+    normal! gk
   endif
 
-  call setpos('.', pos)
 endfunction " }}}1
 
 function! s:strip_markers(line)                                                     " {{{1
