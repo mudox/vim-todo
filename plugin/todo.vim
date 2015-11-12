@@ -4,13 +4,17 @@ scriptencoding utf8
 
 let g:items = []
 let s:files = []
+
+" TODO: need a fallback suite of symbols
+" TODO: need to honor user's choice
 let s:symbol = {
       \ 'folded'   : '',
       \ 'unfolded' : '',
       \ 'p!!!'     : '',
       \ 'p!!'      : ' ',
       \ 'p!'       : '  ',
-      \ 'p'        : '   '
+      \ 'p'        : '   ',
+      \ 'linenr'   : ' ',
       \ }
 let s:titles = [
       \ 'TODO',
@@ -190,7 +194,7 @@ function! s:show()                                                    " {{{1
       let fname = item.fname
       call extend(lines, [
             \ '',
-            \ s:head_line(fname, 'unfolded')
+            \ s:file_line(fname, 'unfolded')
             \ ])
     endif
 
@@ -252,12 +256,15 @@ function! s:show()                                                    " {{{1
   normal! 1G
 endfunction "  }}}1
 
-function! s:head_line(fname, folded)                                  " {{{1
+function! s:file_line(fname, folded)                                  " {{{1
+  let s:file_line_prefix = '.*┐'
+
   if exists('*WebDevIconsGetFileTypeSymbol')
     let ft_symbol = WebDevIconsGetFileTypeSymbol(a:fname)
   else
     let ft_symbol = ''
   end
+
   return printf(' %s ┐ %s %s',
         \ s:symbol[a:folded],
         \ ft_symbol,
@@ -266,7 +273,8 @@ function! s:head_line(fname, folded)                                  " {{{1
 endfunction "  }}}1
 
 function! s:title_line(title)                                         " {{{1
-  return printf('   └ %s:', a:title)
+  let s:title_line_prefix = '   └'
+  return printf('%s %s:', s:title_line_prefix, a:title)
 endfunction "  }}}1
 
 function! s:item_line(item)                                           " {{{1
@@ -282,7 +290,7 @@ function! s:item_line(item)                                           " {{{1
         \ s:item_line_prefix,
         \ s:symbol[a:item.priority],
         \ text,
-        \ printf(': %s', a:item.linenr),
+        \ printf('%s %s', s:symbol.linenr, a:item.linenr),
         \ )
 endfunction "  }}}1
 
