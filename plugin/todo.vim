@@ -208,9 +208,8 @@ function! s:show()                                                    " {{{1
 
   tab drop todo\ list
   let s:bufnr = bufnr('')
-  " TODO!!: move buffter settings to under /ftplugin
+  " TODO!!!: move buffter settings to under /ftplugin
   setlocal buftype=nofile
-  "setlocal bufhidden=wipe
 
   " mappings
   nnoremap <silent><buffer> <Cr> :<C-U>call <SID>on_enter()<Cr>
