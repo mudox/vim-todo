@@ -26,7 +26,71 @@ let s:pattern = '\(' . join(s:titles, '\|') . '\)' . '\(!\{,3}\)'
 let s:pattern = printf('^\s*%s\s*%s:\s*', s:comment_marker, s:pattern)
 let g:mdx_pat = s:pattern
 
-function! s:strip_markers(line)                                       " {{{1
+function! s:line2fname(linenr)                                                      " {{{1
+  return substitute(getline(a:linenr), s:file_line_prefix . ' .', '', '')
+endfunction " }}}1
+
+function! s:on_on()                                                                 " {{{1
+  " TODO: implement s:on_on()
+  let pos = [0, line('.'), col('.'), 0]
+
+  let line = getline('.')
+  if s:is_file_line(line) && line =~ s:symbol.folded
+
+    " unfold section
+    let linenr = line('.')
+    let fname = s:line2fname(linenr)
+    let lines = []
+    for i in range(len(g:items) - 1)
+      if g:items[i].fname == fname
+        let j = i
+        let title = ''
+        while j < len(g:items) && g:items[j].fname == fname
+          if g:items[j].title != title
+            let title = g:items[j].title
+            call add(lines, s:title_line(title))
+          endif
+          call add(lines, s:item_line(g:items[j]))
+          let j += 1
+        endwhile
+        break
+      endif
+    endfor
+
+    setlocal modifiable
+    call setline(linenr, s:file_line(fname, 'unfolded'))
+    call append('.', lines)
+    setlocal nomodifiable
+
+  elseif line =~ s:symbol.unfolded || s:is_title_line(line) || s:is_item_line(line)
+
+    " fold section
+    let linenr = line('.')
+    for i in range(linenr, line('$'))
+      if getline(i) == ''
+        let end_nr = i - 1
+        break
+      endif
+    endfor
+    for i in range(linenr, 1, -1)
+      if s:is_file_line(getline(i))
+        let start_nr = i + 1
+        break
+      endif
+    endfor
+
+    setlocal modifiable
+    silent execute printf('%s,%sd _', start_nr, end_nr)
+    let fname = s:line2fname(start_nr - 1)
+    call setline(start_nr - 1, s:file_line(fname, 'folded'))
+    setlocal nomodifiable
+
+  endif
+
+  call setpos('.', pos)
+endfunction " }}}1
+
+function! s:strip_markers(line)                                                     " {{{1
   let comment_prefix = split(&commentstring, '%s')[0]
   let markers_pat = substitute(&foldmarker, ',', '\\|', '')
   let pattern = printf('\s*\%(%s\)\s*\%(%s\)\d\?\s*',
@@ -36,7 +100,7 @@ function! s:strip_markers(line)                                       " {{{1
   return substitute(a:line, pattern, ' ', '')
 endfunction "  }}}1
 
-function! s:pick()                                                    " {{{1
+function! s:pick()                                                                  " {{{1
   let item = {}
   let item.bufnr = bufnr('%')
   let item.linenr = line('.')
@@ -53,7 +117,7 @@ function! s:pick()                                                    " {{{1
   call add(g:items, item)
 endfunction "  }}}1
 
-function! s:handle_file()                                             " {{{1
+function! s:handle_file()                                                           " {{{1
   if &buftype != ''
     return
   endif
@@ -93,19 +157,19 @@ function! s:sort_items()                                                        
   call sort(g:items, 's:sort_by_fname')
 endfunction "  }}}1
 
-function! s:is_file_line(line)                                            " {{{1
+function! s:is_file_line(line)                                                      " {{{1
   return a:line =~ '^' . s:file_line_prefix
 endfunction "  }}}1
 
-function! s:is_title_line(line)                                           " {{{1
+function! s:is_title_line(line)                                                     " {{{1
   return a:line =~ '^' . s:title_line_prefix
 endfunction "  }}}1
 
-function! s:is_item_line(line)                                            " {{{1
+function! s:is_item_line(line)                                                      " {{{1
   return a:line =~ '^' . s:item_line_prefix
 endfunction "  }}}1
 
-function! s:line2item()                                               " {{{1
+function! s:line2item()                                                             " {{{1
   if ! s:is_item_line(getline('.'))
     return {}
   endif
@@ -118,8 +182,7 @@ function! s:line2item()                                               " {{{1
   " get file path
   for nr in range(line('.'), 1, -1)
     if s:is_file_line(getline(nr))
-      " ISSUE: magic number for prefixing bytes
-      let fname = substitute(getline(nr), '^.*┐', '', '')
+      let fname = s:line2fname(line('.'))
       break
     endif
   endfor
@@ -133,7 +196,7 @@ function! s:line2item()                                               " {{{1
   echoerr printf('fail looking up item: %s|%s', fname, linenr)
 endfunction "  }}}1
 
-function! s:on_enter()                                                " {{{1
+function! s:on_enter()                                                              " {{{1
   let item = s:line2item()
   if empty(item)
     return
@@ -185,7 +248,7 @@ function! s:change_priority(delta)                                              
   call setpos('.', pos)
 endfunction "  }}}1
 
-function! s:show()                                                    " {{{1
+function! s:show()                                                                  " {{{1
   call s:sort_items()
 
   let fname = ''
@@ -218,6 +281,7 @@ function! s:show()                                                    " {{{1
   nnoremap <silent><buffer> - :<C-U>call <SID>change_priority(-1)<Cr>
   nnoremap <silent><buffer> + :<C-U>call <SID>change_priority(1)<Cr>
   nnoremap <silent><buffer> R :<C-U>call <SID>refresh()<Cr>
+  nnoremap <silent><buffer> o :<C-U>call <SID>on_on()<Cr>
   " TODO!: mapping <C-N/P> to navigating
   " TODO!: mapping o toggle folding
 
