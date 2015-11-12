@@ -9,12 +9,12 @@ let s:files = []
 " TODO: need to honor user's choice
 let s:symbol = {
       \ 'folded'   : '',
-      \ 'unfolded' : '',
+      \ 'linenr'   : ' ',
       \ 'p!!!'     : '',
       \ 'p!!'      : ' ',
       \ 'p!'       : '  ',
       \ 'p'        : '   ',
-      \ 'linenr'   : ' ',
+      \ 'unfolded' : '',
       \ }
 let s:titles = [
       \ 'TODO',
@@ -26,8 +26,8 @@ let s:pattern = '\(' . join(s:titles, '\|') . '\)' . '\(!\{,3}\)'
 let s:pattern = printf('^\s*%s\s*%s:\s*', s:comment_marker, s:pattern)
 let g:mdx_pat = s:pattern
 
-function! s:line2fname(linenr)                                                       " {{{1
-  return substitute(getline(a:linenr), s:file_line_prefix . ' .', '', '')
+function! s:line2fname(lnum)                                                         " {{{1
+  return substitute(getline(a:lnum), s:file_line_prefix . ' .', '', '')
 endfunction " }}}1
 
 function! s:on_on()                                                                  " {{{1
@@ -38,8 +38,8 @@ function! s:on_on()                                                             
   if s:is_file_line(line) && line =~ s:symbol.folded
 
     " unfold section
-    let linenr = line('.')
-    let fname = s:line2fname(linenr)
+    let lnum = line('.')
+    let fname = s:line2fname(lnum)
     let lines = []
     for i in range(len(g:items) - 1)
       if g:items[i].fname == fname
@@ -58,7 +58,7 @@ function! s:on_on()                                                             
     endfor
 
     setlocal modifiable
-    call setline(linenr, s:file_line(fname, 'unfolded'))
+    call setline(lnum, s:file_line(fname, 'unfolded'))
     call append('.', lines)
     setlocal nomodifiable
 
@@ -67,14 +67,14 @@ function! s:on_on()                                                             
   elseif line =~ s:symbol.unfolded || s:is_title_line(line) || s:is_item_line(line)
 
     " fold section
-    let linenr = line('.')
-    for i in range(linenr, line('$'))
+    let lnum = line('.')
+    for i in range(lnum, line('$'))
       if getline(i) == ''
         let end_nr = i - 1
         break
       endif
     endfor
-    for i in range(linenr, 1, -1)
+    for i in range(lnum, 1, -1)
       if s:is_file_line(getline(i))
         let start_nr = i + 1
         break
@@ -164,19 +164,19 @@ function! s:nav_section(dir)                                                    
   " a:dir: -1 for navigate up, 1 for navigate down
 
   if a:dir == -1
-    let linenr = search(s:file_line_prefix, 'Wb')
-    let linenr = search(s:file_line_prefix, 'Wb')
+    let lnum = search(s:file_line_prefix, 'Wb')
+    let lnum = search(s:file_line_prefix, 'Wb')
   elseif a:dir == 1
-    let linenr = search(s:file_line_prefix, 'W')
+    let lnum = search(s:file_line_prefix, 'W')
   else
     echoerr printf('a:dir (= %s) need -1 or 1', a:dir)
   endif
 
-  if linenr == 0
+  if lnum == 0
     return
   end
 
-  let fname = s:line2fname(linenr)
+  let fname = s:line2fname(lnum)
   call s:show(fname)
 
   call search(fname)
@@ -203,7 +203,7 @@ function! s:line2item()                                                         
   let cnt = 0
 
   " get line number
-  let linenr = matchstr(getline('.'), '\d\+\ze\s*$') + 0
+  let lnum = matchstr(getline('.'), '\d\+\ze\s*$') + 0
 
   " get file path
   for nr in range(line('.'), 1, -1)
@@ -213,13 +213,13 @@ function! s:line2item()                                                         
     endif
   endfor
 
-  " look up the item by filename & linenr
+  " look up the item by filename & lnum
   for item in g:items
-    if item.linenr == linenr && item.fname == fname
+    if item.linenr == lnum && item.fname == fname
       return item
     endif
   endfor
-  echoerr printf('fail looking up item: %s|%s', fname, linenr)
+  echoerr printf('fail looking up item: %s|%s', fname, lnum)
 endfunction "  }}}1
 
 function! s:on_enter()                                                               " {{{1
@@ -240,9 +240,10 @@ function! s:refresh()                                                           
 endfunction "  }}}1
 
 function! s:change_priority(delta)                                                   " {{{1
+  let col = col('.')
+
   let item = s:line2item()
   if empty(item)
-    "call setpos('.', pos)
     return
   endif
 
@@ -259,11 +260,11 @@ function! s:change_priority(delta)                                              
 
   " cursor follow the changed line
   let line_pat = s:item_line(item)
-  let linenr = index(getline(1, '$'), line_pat)
-  execute printf('normal! %dzz', linenr + 1)
+  call cursor(0, 1)
+  let lnum = search(line_pat, 'Wc' . a:delta == 1 ? 'b' : '')
+  execute printf('normal! %dzz', lnum)
 
   " apply the change back to buffer
-  let pos = [0, line('.'), col('.'), 0]
   execute 'edit ' . item.fname
   let line = getline(item.linenr)
   let line = substitute(line, item.title . '\zs.\{-}\ze:',
@@ -271,7 +272,9 @@ function! s:change_priority(delta)                                              
 
   execute printf('buffer! %s', s:bufnr)
   call setline(item.linenr, line)
-  call setpos('.', pos)
+  update
+
+  call cursor(lnum, col)
 endfunction "  }}}1
 
 function! s:show(...)                                                                " {{{1
