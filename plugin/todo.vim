@@ -102,20 +102,30 @@ function! s:is_item_line(line)                                            " {{{1
 endfunction "  }}}1
 
 function! s:line2item()                                               " {{{1
-  if getline('.') !~ '^' . s:item_line_prefix
+  if ! s:is_item_line(getline('.'))
     return {}
   endif
 
   let cnt = 0
-  " ISSUE: is this marking way robust?
 
-  for line in getline(1, line('.'))
-    if line =~ '^' . s:item_line_prefix
-      let cnt += 1
+  " get line number
+  let linenr = matchstr(getline('.'), '\d\+\ze\s*$') + 0
+
+  " get file path
+  for nr in range(line('.'), 1, -1)
+    if s:is_file_line(getline(nr))
+      " ISSUE: magic number for prefixing bytes
+      let fname = strpart(getline(nr), 15)
     endif
   endfor
 
-  return g:items[cnt - 1]
+  " look up the item by filename & linenr
+  for item in g:items
+    if item.linenr == linenr && item.fname == fname
+      return item
+    endif
+  endfor
+  echoerr printf('fail looking up item: %s|%s', fname, linenr)
 endfunction "  }}}1
 
 function! s:on_enter()                                                " {{{1
