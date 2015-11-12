@@ -184,7 +184,7 @@ function! s:line2item()                                                         
   " get file path
   for nr in range(line('.'), 1, -1)
     if s:is_file_line(getline(nr))
-      let fname = s:line2fname(line('.'))
+      let fname = s:line2fname(nr)
       break
     endif
   endfor
@@ -284,6 +284,8 @@ function! s:show()                                                              
   nnoremap <silent><buffer> + :<C-U>call <SID>change_priority(1)<Cr>
   nnoremap <silent><buffer> R :<C-U>call <SID>refresh()<Cr>
   nnoremap <silent><buffer> o :<C-U>call <SID>on_on()<Cr>
+  nnoremap <silent><buffer> q :close<Cr>
+
   " TODO!: mapping <C-N/P> to navigating
   " TODO!: mapping o toggle folding
 
