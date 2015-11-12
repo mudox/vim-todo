@@ -89,6 +89,18 @@ function! s:sort_items()                                              " {{{1
   call sort(g:items, 's:sort_by_fname')
 endfunction "  }}}1
 
+function! s:on_file_line()                                            " {{{1
+  return getline('.') =~ '^' . s:file_line_prefix
+endfunction "  }}}1
+
+function! s:on_title_line()                                           " {{{1
+  return getline('.') =~ '^' . s:title_line_prefix
+endfunction "  }}}1
+
+function! s:on_item_line()                                            " {{{1
+  return getline('.') =~ '^' . s:item_line_prefix
+endfunction "  }}}1
+
 function! s:line2item()                                               " {{{1
   if getline('.') !~ '^' . s:item_line_prefix
     return {}
