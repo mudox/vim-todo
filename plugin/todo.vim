@@ -33,7 +33,9 @@ function! s:line2fname(lnum)                                                    
 endfunction " }}}1
 
 function! s:on_on()                                                                  " {{{1
-  let pos = [0, line('.'), col('.'), 0]
+  let pos = getcurpos()
+  let startofline = &startofline
+  set nostartofline
 
   let line = getline('.')
   if s:is_file_line(line) && line =~ s:symbol.folded
@@ -233,8 +235,13 @@ endfunction "  }}}1
 
 function! s:refresh()                                                                " {{{1
   let pos = getcurpos()
+  let startofline = &startofline
+  set nostartofline
+
   call MakeToDo()
+
   call setpos('.', pos)
+  let &startofline = startofline
 endfunction "  }}}1
 
 function! s:change_priority(delta)                                                   " {{{1
