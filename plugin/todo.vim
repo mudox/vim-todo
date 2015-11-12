@@ -24,7 +24,12 @@ let s:pattern = printf('^\s*%s\s*%s:\s*', s:comment_marker, s:pattern)
 let g:mdx_pat = s:pattern
 
 function! s:line2fname(lnum)                                                         " {{{1
-  return substitute(getline(a:lnum), s:file_line_prefix . ' .', '', '')
+  " if not on a file line, look upwards to find one first
+  let lnum = search(s:file_line_prefix, 'Wbnc')
+  if lnum == 0
+    return ''
+  endif
+  return substitute(getline(lnum), s:file_line_prefix . ' .', '', '')
 endfunction " }}}1
 
 function! s:on_on()                                                                  " {{{1
