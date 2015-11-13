@@ -2,6 +2,8 @@
 " TODO!!!: make it a plugin
 scriptencoding utf8
 
+" IDEA!!!: add each mapping's doc text within its' corresponding function.
+
 " TODO: need a fallback suite of symbols
 " TODO: need to honor user's choice
 let s:symbol = {
@@ -461,9 +463,8 @@ endfunction "  }}}1
 function! s:update_items()                                                           " {{{1
   let s:files = []
   let g:items = []
-  " IDEA!!!: the bufdo & argdo may not be the efficient way
-  " IDEA!: study other todo plugin to see how them parsing & collect items
-  " ISSUE: is this marking way robust?
+  " ISSUE!!!: the bufdo & argdo way is sure to be readly BAD solution
+  " TODO!!!: use external programming & asynchrization to collect " items
   let bufnr = bufnr('')
   silent bufdo call s:handle_file()
   if argc() > 0
