@@ -23,14 +23,29 @@ let s:pattern = '\(' . join(s:titles, '\|') . '\)' . '\(!\{,3}\)'
 let s:pattern = printf('^\s*%s\s*%s:\s*', s:comment_marker, s:pattern)
 let g:mdx_pat = s:pattern
 
-function! s:line2fname(...)                                                         " {{{1
-  if a:0 == 1
-    let lnum = a:1
-  elseif a:0 == 0
-    " if not on a file line, look upwards to find one first
-    let lnum = search(s:file_line_prefix, 'Wbnc')
+function! s:line2fname(which)                                                        " {{{1
+  " TODO!!!: refactor it with new parameter types
+  " a:which accepts 2 kinds of values,
+  "   a string that is one of 'next', 'cur', 'prev'
+  "   a line number
+
+  let flags = {
+        \ 'next' : 'Wn',
+        \ 'cur'  : 'Wnbc',
+        \ 'prev' : 'Wnbc',
+        \ }
+  if a:which =~ 'next\|cur\|prev'
+    let lnum = search(s:file_line_prefix, flags[a:which])
+    if a:which == 'prev'
+      let lnum = search(s:file_line_prefix, flags[a:which])
+    endif
+  elseif type(a:which) == type(1)
+    let lnum = a:which
   else
-    echoerr printf('only need 0 or 1 (line number) argument, %s is given', a:0)
+    echoerr printf(
+          \ 'a:which (= %s) need a string of  [next, cur, prev] or a line number',
+          \ a:which,
+          \ )
   endif
 
   " first & last line must be empty line, can not be valid file line
