@@ -58,8 +58,6 @@ endfunction " }}}1
 
 function! s:on_o()                                                                   " {{{1
   let pos = getcurpos()
-  let startofline = &startofline
-  set nostartofline
 
   let line = getline('.')
   if s:is_file_line(line) && line =~ s:symbol.folded
@@ -89,7 +87,10 @@ function! s:on_o()                                                              
     call append('.', lines)
     setlocal nomodifiable
 
+    let startofline = &startofline
+    set nostartofline
     call setpos('.', pos)
+    let &startofline = startofline
 
   elseif line =~ s:symbol.unfolded || s:is_title_line(line) || s:is_item_line(line)
 
@@ -278,11 +279,11 @@ endfunction "  }}}1
 
 function! s:refresh()                                                                " {{{1
   let pos = getcurpos()
-  let startofline = &startofline
-  set nostartofline
 
   call MakeToDo()
 
+  let startofline = &startofline
+  set nostartofline
   call setpos('.', pos)
   let &startofline = startofline
 endfunction "  }}}1
