@@ -22,7 +22,7 @@ let s:titles = [
       \ 'IDEA',
       \ ]
 
-function! s:line2fname(which)                                                       " {{{1
+function! s:line2fname(which)                                                          " {{{1
   " TODO!!!: refactor it with new parameter types
   " a:which accepts 2 kinds of values,
   "   a string that is one of 'next', 'cur', 'prev'
@@ -55,7 +55,7 @@ function! s:line2fname(which)                                                   
   return substitute(getline(lnum), s:file_line_prefix . ' .', '', '')
 endfunction " }}}1
 
-function! s:on_o()                                                                  " {{{1
+function! s:ui_unfold_section()                                                        " {{{1
   let pos = getcurpos()
 
   let line = getline('.')
@@ -119,12 +119,16 @@ function! s:on_o()                                                              
 
 endfunction " }}}1
 
-function! s:on_zi()                                                                 " {{{1
-  " TODO!!!: implement on_zx()
+function! s:ui_goto_section()                                                          " {{{1
+  " TODO!!!: implement ui_goto_section()
 endfunction " }}}1
 
-function! s:on_zx()                                                                 " {{{1
-  " TODO!!!: implement on_zi()
+function! s:ui_toggle_folding()                                                        " {{{1
+  " TODO!!!: implement ui_toggle_folding()
+endfunction " }}}1
+
+function! s:ui_only_unfold_current_section()                                           " {{{1
+  " TODO!!!: implement ui_only_unfold_current_section()
   let fname = s:line2fname('cur')
 
   let on_file_line = 0
@@ -151,7 +155,7 @@ function! s:on_zx()                                                             
   endif
 endfunction " }}}1
 
-function! s:strip_markers(line)                                                     " {{{1
+function! s:strip_markers(line)                                                        " {{{1
   let comment_prefix = split(&commentstring, '%s')[0]
   let markers_pat = substitute(&foldmarker, ',', '\\|', '')
   let pattern = printf('\s*\%(%s\)\s*\%(%s\)\d\?\s*',
@@ -161,7 +165,7 @@ function! s:strip_markers(line)                                                 
   return substitute(a:line, pattern, ' ', '')
 endfunction "  }}}1
 
-function! s:sort_items()                                                            " {{{1
+function! s:sort_items()                                                               " {{{1
   function! s:sort_by_priority(l, r)
     let left = a:l.priority
     let right = a:r.priority
@@ -186,7 +190,7 @@ function! s:sort_items()                                                        
   call sort(g:items, 's:sort_by_fname')
 endfunction "  }}}1
 
-function! s:nav_section(dir)                                                        " {{{1
+function! s:nav_section(dir)                                                           " {{{1
   let pos = getcurpos()
 
   if a:dir == -1
@@ -212,19 +216,19 @@ function! s:nav_section(dir)                                                    
   call search(fname)
 endfunction " }}}1
 
-function! s:is_file_line(line)                                                      " {{{1
+function! s:is_file_line(line)                                                         " {{{1
   return a:line =~ '^' . s:file_line_prefix
 endfunction "  }}}1
 
-function! s:is_title_line(line)                                                     " {{{1
+function! s:is_title_line(line)                                                        " {{{1
   return a:line =~ '^' . s:title_line_prefix
 endfunction "  }}}1
 
-function! s:is_item_line(line)                                                      " {{{1
+function! s:is_item_line(line)                                                         " {{{1
   return a:line =~ '^' . s:item_line_prefix
 endfunction "  }}}1
 
-function! s:line2item()                                                             " {{{1
+function! s:line2item()                                                                " {{{1
   if ! s:is_item_line(getline('.'))
     return {}
   endif
@@ -251,7 +255,7 @@ function! s:line2item()                                                         
   echoerr printf('fail looking up item: %s|%s', fname, lnum)
 endfunction "  }}}1
 
-function! s:on_enter()                                                              " {{{1
+function! s:ui_goto_definition()                                                                 " {{{1
   let item = s:line2item()
   if empty(item)
     return
@@ -262,7 +266,7 @@ function! s:on_enter()                                                          
   silent! normal! zO
 endfunction "  }}}1
 
-function! s:refresh()                                                               " {{{1
+function! s:refresh()                                                                  " {{{1
   let pos = getcurpos()
 
   call MakeToDo()
@@ -273,7 +277,7 @@ function! s:refresh()                                                           
   let &startofline = startofline
 endfunction "  }}}1
 
-function! s:change_priority(delta)                                                  " {{{1
+function! s:change_priority(delta)                                                     " {{{1
   let col = col('.')
 
   let item = s:line2item()
@@ -311,7 +315,7 @@ function! s:change_priority(delta)                                              
   call cursor(lnum, col)
 endfunction "  }}}1
 
-function! s:show(...)                                                               " {{{1
+function! s:show(...)                                                                  " {{{1
   " if arg1 is given and is a file path, then only unfold this file's secition
 
   if a:0 > 1
@@ -366,15 +370,15 @@ function! s:show(...)                                                           
   setlocal nobuflisted
 
   " mappings
-  nnoremap <silent><buffer> <Cr>  :<C-U>call <SID>on_enter()<Cr>
+  nnoremap <silent><buffer> <Cr>  :<C-U>call <SID>ui_goto_definition()<Cr>
   nnoremap <silent><buffer> -     :<C-U>call <SID>change_priority(-1)<Cr>
   nnoremap <silent><buffer> +     :<C-U>call <SID>change_priority(1)<Cr>
   nnoremap <silent><buffer> r     :<C-U>call <SID>refresh()<Cr>
-  nnoremap <silent><buffer> o     :<C-U>call <SID>on_o()<Cr>
+  nnoremap <silent><buffer> o     :<C-U>call <SID>ui_unfold_section()<Cr>
   nnoremap <silent><buffer> q     :close<Cr>
   nnoremap <silent><buffer> <C-n> :<C-U>call <SID>nav_section(1)<Cr>
   nnoremap <silent><buffer> <C-p> :<C-U>call <SID>nav_section(-1)<Cr>
-  nnoremap <silent><buffer> zx    :<C-U>call <SID>on_zx()<Cr>
+  nnoremap <silent><buffer> zx    :<C-U>call <SID>ui_only_unfold_current_section()<Cr>
 
   " TODO!: move syntax settings to under /syntax
   call clearmatches()
@@ -412,7 +416,7 @@ function! s:show(...)                                                           
   normal! 1G
 endfunction "  }}}1
 
-function! s:file_line(fname, folded)                                                " {{{1
+function! s:file_line(fname, folded)                                                   " {{{1
   let s:file_line_prefix = printf(' \(%s\|%s\)',
         \ s:symbol.folded, s:symbol.unfolded)
 
@@ -424,12 +428,12 @@ function! s:file_line(fname, folded)                                            
         \ )
 endfunction "  }}}1
 
-function! s:title_line(title)                                                       " {{{1
+function! s:title_line(title)                                                          " {{{1
   let s:title_line_prefix = '   └'
   return printf('%s %s:', s:title_line_prefix, a:title)
 endfunction "  }}}1
 
-function! s:item_line(item)                                                         " {{{1
+function! s:item_line(item)                                                            " {{{1
   let max_text_width = 62
   if len(a:item.text) > max_text_width
     let text = a:item.text[:55] . ' ...'
@@ -446,7 +450,7 @@ function! s:item_line(item)                                                     
         \ )
 endfunction "  }}}1
 
-function! s:collect()                                                               " {{{1
+function! s:collect()                                                                  " {{{1
   " TODO: need to return them back to under s: scope
   let g:files = []
   let g:items = []
@@ -461,7 +465,7 @@ function! s:collect()                                                           
   endfor
 endfunction "  }}}1
 
-function! s:handle_buf(bufnr)                                                       " {{{1
+function! s:handle_buf(bufnr)                                                          " {{{1
   " TODO!!!: implement s:handle_buf()
 
   let s:comment_marker = split(getbufvar(a:bufnr, '&commentstring'), '%s')[0]
@@ -490,7 +494,7 @@ function! s:handle_buf(bufnr)                                                   
   endfor
 endfunction " }}}1
 
-function! g:MakeToDo()                                                              " {{{1
+function! g:MakeToDo()                                                                 " {{{1
   call s:collect()
   call s:show()
 endfunction "  }}}1
