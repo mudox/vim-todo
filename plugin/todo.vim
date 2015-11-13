@@ -33,6 +33,7 @@ function! s:line2fname(...)                                                     
     echoerr printf('only need 0 or 1 (line number) argument, %s is given', a:0)
   endif
 
+  " first & last line must be empty line, can not be valid file line
   if lnum == 0 || lnum == line('$')
     return ''
   endif
@@ -338,6 +339,7 @@ function! s:show(...)                                                           
         let fileline = s:file_line(fname, 'folded')
       endif
 
+      " first line MUST be empty line
       call extend(lines, [
             \ '',
             \ fileline,
@@ -403,7 +405,7 @@ function! s:show(...)                                                           
 
   setlocal modifiable
   %d_
-  call append(0, lines)
+  call append(0, lines) " last line MUST be empty line
   setlocal nomodifiable
   normal! 1G
 endfunction "  }}}1
