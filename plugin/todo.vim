@@ -171,6 +171,8 @@ function! s:sort_items()                                                        
 endfunction "  }}}1
 
 function! s:nav_section(dir)                                                         " {{{1
+  let pos = getcurpos()
+
   if a:dir == -1
     let lnum = search(s:file_line_prefix, 'Wb')
     let lnum = search(s:file_line_prefix, 'Wb')
@@ -181,6 +183,10 @@ function! s:nav_section(dir)                                                    
   endif
 
   if lnum == 0
+    let startofline = &startofline
+    set nostartofline
+    call setpos('.', pos)
+    let &startofline = startofline
     return
   end
 
