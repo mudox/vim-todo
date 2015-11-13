@@ -126,10 +126,29 @@ endfunction " }}}1
 function! s:on_zx()                                                                 " {{{1
   " TODO!!!: implement on_zi()
   let fname = s:line2fname('cur')
+
+  let on_file_line = 0
+  let pos = []
+  if s:is_file_line(line('.'))
+    let on_file_line = 1
+  else
+    let col = col('.')
+    let off = line('.') - search(fname, 'w')
+  endif
+
   if !empty(fname)
     call s:show(fname)
   endif
-  call search(fname, 'w')
+
+  if on_file_line
+    call search(fname, 'w')
+  else
+    let lnum = search(fname, 'w') + off
+    let startofline = &startofline
+    set nostartofline
+    call cursor(lnum, col)
+    let &startofline = startofline
+  endif
 endfunction " }}}1
 
 function! s:strip_markers(line)                                                     " {{{1
