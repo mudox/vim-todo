@@ -15,17 +15,14 @@ let s:symbol = {
       \ 'p'        : '   ',
       \ 'unfolded' : '',
       \ }
+
 let s:titles = [
       \ 'TODO',
       \ 'ISSUE',
       \ 'IDEA',
       \ ]
-let s:comment_marker = split(&commentstring, '%s')[0]
-let s:pattern = '\(' . join(s:titles, '\|') . '\)' . '\(!\{,3}\)'
-let s:pattern = printf('^\s*%s\s*%s:\s*', s:comment_marker, s:pattern)
-let g:mdx_pat = s:pattern
 
-function! s:line2fname(which)                                                        " {{{1
+function! s:line2fname(which)                                                       " {{{1
   " TODO!!!: refactor it with new parameter types
   " a:which accepts 2 kinds of values,
   "   a string that is one of 'next', 'cur', 'prev'
@@ -58,7 +55,7 @@ function! s:line2fname(which)                                                   
   return substitute(getline(lnum), s:file_line_prefix . ' .', '', '')
 endfunction " }}}1
 
-function! s:on_o()                                                                   " {{{1
+function! s:on_o()                                                                  " {{{1
   let pos = getcurpos()
 
   let line = getline('.')
@@ -122,11 +119,11 @@ function! s:on_o()                                                              
 
 endfunction " }}}1
 
-function! s:on_zi()                                                                  " {{{1
+function! s:on_zi()                                                                 " {{{1
   " TODO!!!: implement on_zx()
 endfunction " }}}1
 
-function! s:on_zx()                                                                  " {{{1
+function! s:on_zx()                                                                 " {{{1
   " TODO!!!: implement on_zi()
   let fname = s:line2fname('cur')
   if !empty(fname)
@@ -135,7 +132,7 @@ function! s:on_zx()                                                             
   call search(fname, 'w')
 endfunction " }}}1
 
-function! s:strip_markers(line)                                                      " {{{1
+function! s:strip_markers(line)                                                     " {{{1
   let comment_prefix = split(&commentstring, '%s')[0]
   let markers_pat = substitute(&foldmarker, ',', '\\|', '')
   let pattern = printf('\s*\%(%s\)\s*\%(%s\)\d\?\s*',
@@ -145,39 +142,7 @@ function! s:strip_markers(line)                                                 
   return substitute(a:line, pattern, ' ', '')
 endfunction "  }}}1
 
-function! s:pick()                                                                   " {{{1
-  let item = {}
-  let item.bufnr = bufnr('%')
-  let item.linenr = line('.')
-  let item.fname = fnamemodify(bufname('%'), ':p')
-
-  let line = getline('.')
-  echo matchlist(line, s:pattern)
-  let [item.title, item.priority] = matchlist(line, s:pattern)[1:2]
-  let item.priority = 'p' . item.priority
-
-  let item.text = line[matchend(line, s:pattern) : ]
-  let item.text = s:strip_markers(item.text)
-
-  call add(g:items, item)
-endfunction "  }}}1
-
-function! s:handle_file()                                                            " {{{1
-  if &buftype != ''
-    return
-  endif
-
-  let full_path = fnamemodify(bufname('%'), ':p')
-  if index(s:files, full_path) != -1
-    return
-  else
-    call add(s:files, full_path)
-  endif
-
-  execute 'g/' . s:pattern . '/call s:pick()'
-endfunction "  }}}1
-
-function! s:sort_items()                                                             " {{{1
+function! s:sort_items()                                                            " {{{1
   function! s:sort_by_priority(l, r)
     let left = a:l.priority
     let right = a:r.priority
@@ -202,7 +167,7 @@ function! s:sort_items()                                                        
   call sort(g:items, 's:sort_by_fname')
 endfunction "  }}}1
 
-function! s:nav_section(dir)                                                         " {{{1
+function! s:nav_section(dir)                                                        " {{{1
   let pos = getcurpos()
 
   if a:dir == -1
@@ -228,19 +193,19 @@ function! s:nav_section(dir)                                                    
   call search(fname)
 endfunction " }}}1
 
-function! s:is_file_line(line)                                                       " {{{1
+function! s:is_file_line(line)                                                      " {{{1
   return a:line =~ '^' . s:file_line_prefix
 endfunction "  }}}1
 
-function! s:is_title_line(line)                                                      " {{{1
+function! s:is_title_line(line)                                                     " {{{1
   return a:line =~ '^' . s:title_line_prefix
 endfunction "  }}}1
 
-function! s:is_item_line(line)                                                       " {{{1
+function! s:is_item_line(line)                                                      " {{{1
   return a:line =~ '^' . s:item_line_prefix
 endfunction "  }}}1
 
-function! s:line2item()                                                              " {{{1
+function! s:line2item()                                                             " {{{1
   if ! s:is_item_line(getline('.'))
     return {}
   endif
@@ -267,7 +232,7 @@ function! s:line2item()                                                         
   echoerr printf('fail looking up item: %s|%s', fname, lnum)
 endfunction "  }}}1
 
-function! s:on_enter()                                                               " {{{1
+function! s:on_enter()                                                              " {{{1
   let item = s:line2item()
   if empty(item)
     return
@@ -278,7 +243,7 @@ function! s:on_enter()                                                          
   silent! normal! zO
 endfunction "  }}}1
 
-function! s:refresh()                                                                " {{{1
+function! s:refresh()                                                               " {{{1
   let pos = getcurpos()
 
   call MakeToDo()
@@ -289,7 +254,7 @@ function! s:refresh()                                                           
   let &startofline = startofline
 endfunction "  }}}1
 
-function! s:change_priority(delta)                                                   " {{{1
+function! s:change_priority(delta)                                                  " {{{1
   let col = col('.')
 
   let item = s:line2item()
@@ -327,7 +292,7 @@ function! s:change_priority(delta)                                              
   call cursor(lnum, col)
 endfunction "  }}}1
 
-function! s:show(...)                                                                " {{{1
+function! s:show(...)                                                               " {{{1
   " if arg1 is given and is a file path, then only unfold this file's secition
 
   if a:0 > 1
@@ -379,6 +344,7 @@ function! s:show(...)                                                           
   let s:bufnr = bufnr('')
   " TODO!!: move buffter settings to under /ftplugin
   setlocal buftype=nofile
+  setlocal nobuflisted
 
   " mappings
   nnoremap <silent><buffer> <Cr>  :<C-U>call <SID>on_enter()<Cr>
@@ -427,8 +393,9 @@ function! s:show(...)                                                           
   normal! 1G
 endfunction "  }}}1
 
-function! s:file_line(fname, folded)                                                 " {{{1
-  let s:file_line_prefix = printf(' \(%s\|%s\)', s:symbol.folded, s:symbol.unfolded)
+function! s:file_line(fname, folded)                                                " {{{1
+  let s:file_line_prefix = printf(' \(%s\|%s\)',
+        \ s:symbol.folded, s:symbol.unfolded)
 
   let node = (a:folded == 'folded') ? ' ' : '┐'
   return printf(' %s %s%s',
@@ -438,12 +405,12 @@ function! s:file_line(fname, folded)                                            
         \ )
 endfunction "  }}}1
 
-function! s:title_line(title)                                                        " {{{1
+function! s:title_line(title)                                                       " {{{1
   let s:title_line_prefix = '   └'
   return printf('%s %s:', s:title_line_prefix, a:title)
 endfunction "  }}}1
 
-function! s:item_line(item)                                                          " {{{1
+function! s:item_line(item)                                                         " {{{1
   let max_text_width = 62
   if len(a:item.text) > max_text_width
     let text = a:item.text[:55] . ' ...'
@@ -460,21 +427,52 @@ function! s:item_line(item)                                                     
         \ )
 endfunction "  }}}1
 
-function! s:update_items()                                                           " {{{1
-  let s:files = []
+function! s:collect()                                                               " {{{1
+  " TODO: need to return them back to under s: scope
+  let g:files = []
   let g:items = []
-  " ISSUE!!!: the bufdo & argdo way is sure to be readly BAD solution
-  " TODO!!!: use external programming & asynchrization to collect " items
-  let bufnr = bufnr('')
-  silent bufdo call s:handle_file()
-  if argc() > 0
-    silent argdo call s:handle_file()
-  endif
-  execute printf('buffer %d', bufnr)
+
+  " IDEA!!: is asynchronization necessary?
+  " IDEA!: arg list can be handled by `ag`, add it in?
+  for bufnr in range(1, bufnr('$'))
+    if bufexists(bufnr) && buflisted(bufnr) && getbufvar(bufnr, '&buftype') == ''
+      call add(g:files, bufname(bufnr))
+      call s:handle_buf(bufnr)
+    endif
+  endfor
 endfunction "  }}}1
 
-function! g:MakeToDo()                                                               " {{{1
-  call s:update_items()
+function! s:handle_buf(bufnr)                                                       " {{{1
+  " TODO!!!: implement s:handle_buf()
+
+  let s:comment_marker = split(getbufvar(a:bufnr, '&commentstring'), '%s')[0]
+  let s:pattern = '\(' . join(s:titles, '\|') . '\)' . '\(!\{,3}\)'
+  let s:pattern = printf('^\s*%s\s*%s:\s*', s:comment_marker, s:pattern)
+  let g:pattern = s:pattern
+
+  let lines = getbufline(a:bufnr, 1, '$')
+  for linenr in range(1, len(lines))
+    if lines[linenr - 1] =~ s:pattern
+      let item        = {}
+      let item.bufnr  = a:bufnr
+      let item.linenr = linenr
+      let item.fname  = fnamemodify(bufname(a:bufnr), ':p')
+
+      let line = lines[linenr - 1]
+      let [item.title, item.priority] = matchlist(line, s:pattern)[1:2]
+      " possible value: p, p!, p!!, p!!!
+      let item.priority = 'p' . item.priority
+
+      let item.text = line[matchend(line, s:pattern) : ]
+      let item.text = s:strip_markers(item.text)
+
+      call add(g:items, item)
+    endif
+  endfor
+endfunction " }}}1
+
+function! g:MakeToDo()                                                              " {{{1
+  call s:collect()
   call s:show()
 endfunction "  }}}1
 
