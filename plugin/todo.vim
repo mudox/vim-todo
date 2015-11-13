@@ -23,16 +23,24 @@ let s:pattern = '\(' . join(s:titles, '\|') . '\)' . '\(!\{,3}\)'
 let s:pattern = printf('^\s*%s\s*%s:\s*', s:comment_marker, s:pattern)
 let g:mdx_pat = s:pattern
 
-function! s:line2fname(lnum)                                                         " {{{1
-  " if not on a file line, look upwards to find one first
-  let lnum = search(s:file_line_prefix, 'Wbnc')
-  if lnum == 0
+function! s:line2fname(...)                                                         " {{{1
+  if a:0 == 1
+    let lnum = a:1
+  elseif a:0 == 0
+    " if not on a file line, look upwards to find one first
+    let lnum = search(s:file_line_prefix, 'Wbnc')
+  else
+    echoerr printf('only need 0 or 1 (line number) argument, %s is given', a:0)
+  endif
+
+  if lnum == 0 || lnum == line('$')
     return ''
   endif
+
   return substitute(getline(lnum), s:file_line_prefix . ' .', '', '')
 endfunction " }}}1
 
-function! s:on_on()                                                                  " {{{1
+function! s:on_o()                                                                   " {{{1
   let pos = getcurpos()
   let startofline = &startofline
   set nostartofline
@@ -338,8 +346,8 @@ function! s:show(...)                                                           
   nnoremap <silent><buffer> <Cr>  :<C-U>call <SID>on_enter()<Cr>
   nnoremap <silent><buffer> -     :<C-U>call <SID>change_priority(-1)<Cr>
   nnoremap <silent><buffer> +     :<C-U>call <SID>change_priority(1)<Cr>
-  nnoremap <silent><buffer> R     :<C-U>call <SID>refresh()<Cr>
-  nnoremap <silent><buffer> o     :<C-U>call <SID>on_on()<Cr>
+  nnoremap <silent><buffer> r     :<C-U>call <SID>refresh()<Cr>
+  nnoremap <silent><buffer> o     :<C-U>call <SID>on_o()<Cr>
   nnoremap <silent><buffer> q     :close<Cr>
   nnoremap <silent><buffer> <C-n> :<C-U>call <SID>nav_section(1)<Cr>
   nnoremap <silent><buffer> <C-p> :<C-U>call <SID>nav_section(-1)<Cr>
