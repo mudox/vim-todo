@@ -60,7 +60,7 @@ function! s:on_o()                                                              
   let pos = getcurpos()
 
   let line = getline('.')
-  if s:is_file_line(line) && line =~ s:symbol.folded
+  if line =~ s:symbol.folded
 
     " unfold section
     let lnum = line('.')
@@ -224,7 +224,6 @@ function! s:nav_section(dir)                                                    
   call s:show(fname)
 
   call search(fname)
-
 endfunction " }}}1
 
 function! s:is_file_line(line)                                                       " {{{1
