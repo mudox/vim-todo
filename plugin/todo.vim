@@ -103,6 +103,19 @@ function! s:on_o()                                                              
 
 endfunction " }}}1
 
+function! s:on_zi()                                                                  " {{{1
+  " TODO!!!: implement on_zx()
+endfunction " }}}1
+
+function! s:on_zx()                                                                  " {{{1
+  " TODO!!!: implement on_zi()
+  let fname = s:line2fname('cur')
+  if !empty(fname)
+    call s:show(fname)
+  endif
+  call search(fname, 'w')
+endfunction " }}}1
+
 function! s:strip_markers(line)                                                      " {{{1
   let comment_prefix = split(&commentstring, '%s')[0]
   let markers_pat = substitute(&foldmarker, ',', '\\|', '')
@@ -357,6 +370,7 @@ function! s:show(...)                                                           
   nnoremap <silent><buffer> q     :close<Cr>
   nnoremap <silent><buffer> <C-n> :<C-U>call <SID>nav_section(1)<Cr>
   nnoremap <silent><buffer> <C-p> :<C-U>call <SID>nav_section(-1)<Cr>
+  nnoremap <silent><buffer> zx    :<C-U>call <SID>on_zx()<Cr>
 
   " TODO!: move syntax settings to under /syntax
   call clearmatches()
