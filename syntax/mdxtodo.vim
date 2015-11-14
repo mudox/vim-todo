@@ -26,14 +26,14 @@ call matchadd('todoMedium', '  .*$')
 call matchadd('todoLow', '  .*$')
 call matchadd('todoNormal', '^ \{9}\zs.*$')
 
-highlight link todoTitle Keyword
-highlight link todoLine Comment
-highlight link todoFileName String
-highlight link todoFoldedSymbol Type
+highlight link todoTitle          Keyword
+highlight link todoLine           Comment
+highlight link todoFileName       String
+highlight link todoFoldedSymbol   Type
 highlight link todoUnfoldedSymbol Type
 
 call matchadd('todoTitle','└\zs.*$')
 call matchadd('todoLine','└\|┐', 100)
-call matchadd('String', mudox#todo#file_line_prefix . '.\zs.*$')
+call matchadd('String', mudox#todo#v_fline_prefix . '.\zs.*$')
 call matchadd('todoFoldedSymbol', mudox#todo#symbol.folded)
 call matchadd('todoUnFoldedSymbol', mudox#todo#symbol.unfolded)
