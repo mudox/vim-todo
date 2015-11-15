@@ -104,7 +104,10 @@ function! s:m_collect_buf(bufnr)                                                
 endfunction " }}}2
 
 function! s:m_collect_file(fname)                                                    " {{{2
-  " TODO: implement s:m_collect_file(fname)
+  if !filereadable(a:fname)
+    return
+  endif
+
   let lines = readfile(a:fname)
   for idx in range(len(lines))
     let line = lines[idx]
