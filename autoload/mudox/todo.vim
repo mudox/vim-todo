@@ -190,6 +190,7 @@ function! s:v_show()                                                            
 
     if item.fname != fname
       let fname = item.fname
+      let title = '' " must print whatever title next line if unfolded
       let fileline = s:v_fline(fname,
             \ unfolded ? 'unfolded' : 'folded')
 
@@ -200,19 +201,17 @@ function! s:v_show()                                                            
             \ ])
     endif
 
-    "if !unfolded
-      "continue
-    "endif
+    if !unfolded
+      continue
+    endif
 
     " print title lines & item lines if current section is unfolded
-    if get(s:v.fold, fname, 0)
-      " print title line if entering a new title section
-      if item.title != title
-        let title = item.title
-        call add(lines, s:v_tline(title))
-      endif
-      call add(lines, s:v_iline(item))
+    " print title line if entering a new title section
+    if item.title != title
+      let title = item.title
+      call add(lines, s:v_tline(title))
     endif
+    call add(lines, s:v_iline(item))
 
   endfor
 
