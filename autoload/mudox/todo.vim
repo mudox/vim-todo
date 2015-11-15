@@ -157,6 +157,8 @@ endfunction " }}}2
 
 " THE VIEW                                                                             {{{1
 " the view status object & it's old snapshot
+let s:v_bufnr = 0
+
 let s:v_old = {}
 let s:v = {}
 
@@ -252,9 +254,19 @@ function! s:v_iline(item)                                                       
 endfunction "  }}}2
 
 function! s:v_open_win(...)                                                          " {{{2
-  " TODO!!: Qpen() here, and Qpen() need to change it's throw habit
-  tab drop *TODO*
-  let s:bufnr = bufnr('%')
+  let bufname = '\|TODO\ LIST\|'
+
+  " if *TODO* window is open in some tabpage, jump to it
+  for i in range(tabpagenr('$'))
+    if index(tabpagebuflist(i + 1), s:v_bufnr) != -1
+      execute 'drop ' . bufname
+      return
+    endif
+  endfor
+
+  " else query open a new window
+  call Qpen(bufname)
+  let s:v_bufnr = bufnr('%')
   set filetype=mdxtodo
 endfunction " }}}2
 
@@ -399,7 +411,7 @@ function! mudox#todo#v_change_priority(delta)                                   
   call setline(item.lnum, line)
   update
 
-  execute printf('buffer! %s', s:bufnr)
+  execute printf('buffer! %s', s:v_bufnr)
 
   let startofline = &startofline
   set nostartofline
@@ -439,6 +451,10 @@ endfunction "  }}}2
 
 function! mudox#todo#v_toggle_section_fold()                                         " {{{2
   let fline = getline(s:v_seek_fline('.', 'cur'))
+  if fline == ''
+    return
+  endif
+
   let fname = s:v_line2fname(fline)
   let folded = ! (fline =~ s:symbol.unfolded)
   let s:v.fold[fname] = folded
@@ -460,7 +476,15 @@ endfunction "  }}}2
 " }}}1
 
 function! mudox#todo#main()                                                          " {{{1
-  call s:v_open_win()
+  try
+    call s:v_open_win()
+  catch /^Qpen: Canceled$/
+    echohl WarningMsg
+    echo '* user canceled *'
+    echohl None
+    return
+  endtry
+
   call mudox#todo#v_refresh()
 endfunction "  }}}1
 
