@@ -320,26 +320,19 @@ function! s:v_lnum2item(lnum)                                                   
   let lnum = matchstr(line, '\d\+\ze\s*$') + 0
 
   " get file path
-  let fname = ''
-  for nr in range(line('.'), 1, -1)
-    if s:v_is_fline(getline(nr))
-      let fname = s:v_seek_fline(nr)
-      break
-    endif
-  endfor
+  let fname = s:v_line2fname(getline(s:v_seek_fline(lnum, 'cur')))
 
   " look up the item by filename & lnum
-  for item in s:m_items
-    if item.lnum == lnum && item.fname == fname
-      return item
-    endif
-  endfor
-  echoerr printf('fail looking up item: %s|%s', fname, lnum)
-endfunction "  }}}2
+  let items = filter(copy(s:m_items),
+        \ 'v:val.fname == fname && v:val.lnum == lnum')
 
-function! s:v_goto_section()                                                         " {{{2
-  " TODO!!!: implement ui_goto_section()
-endfunction " }}}2
+  if len(items) != 1
+    echoerr printf('%d matching items filtered, must be 1', len(items))
+    call s:dbg_log(items)
+  endif
+
+  return items[0]
+endfunction "  }}}2
 
 function! s:v_toggle_folding()                                                       " {{{2
   " TODO!!: implement ui_toggle_folding()
