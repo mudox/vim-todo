@@ -448,10 +448,21 @@ function! mudox#todo#main()                                                     
   call mudox#todo#v_refresh()
 endfunction "  }}}1
 
-function! Mdx()                                                                      " {{{1
+" LOGGING & DEBUG {{{1
+function! s:dbg_log(...) " {{{2
+  redir! > /tmp/vim-todo.log
+
+  echo 's:m_items ----'
   for i in s:m_items
     echo i
   endfor
-  echo '----'
+
+  echo "\ns:v ----"
   echo s:v
-endfunction " }}}1
+
+  echo "\na:000 ----"
+  echo a:000
+
+  redir END
+endfunction " }}}2
+" }}}1
