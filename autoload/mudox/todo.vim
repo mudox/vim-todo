@@ -41,6 +41,7 @@ let s:titles = [
 "  text: text after 'TITLE:'
 let s:m_items_old = []
 let s:m_items = []
+lockvar s:m_items
 
 " fallback pattern used to parse files unloaded, capture groups are:
 " [title, priority, text]
@@ -75,10 +76,12 @@ function! s:m_sort_items()                                                      
     return left == right ? 0 : left > right ? 1 : -1
   endfunction
 
+  unlockvar s:m_items
   call sort(s:m_items, 's:sort_by_lnum')
   call sort(s:m_items, 's:sort_by_priority')
   call sort(s:m_items, 's:sort_by_title')
   call sort(s:m_items, 's:sort_by_fname')
+  lockvar s:m_items
 endfunction "  }}}2
 
 function! s:m_collect_buf(bufnr)                                                     " {{{2
@@ -126,6 +129,7 @@ function! s:m_collect_file(fname)                                               
 endfunction " }}}2
 
 function! s:m_collect()                                                              " {{{2
+  unlockvar s:m_items
   let s:m_items = []
 
   " IDEA!!: is asynchronization necessary?
@@ -149,6 +153,8 @@ function! s:m_collect()                                                         
     echo 'TODO LIST: no todo list collect'
     echohl None
   endif
+
+  lockvar s:m_items
 endfunction "  }}}2
 
 function! s:m_fname_set()                                                            " {{{2
@@ -231,13 +237,20 @@ function! s:v_show()                                                            
 endfunction "  }}}2
 
 function! s:v_fline(fname, folded)                                                   " {{{2
-
   " TODO!!: when closed show how many items it have
+  let path_width = 68
+
+  if len(a:fname) > path_width
+    let path_text = a:fname[:path_width - 3 - 1] . '...'
+  else
+    let path_text = a:fname
+  endif
+
   let node = (a:folded == 'folded') ? ' ' : '┐'
   return printf(' %s %s%s',
         \ s:symbol[a:folded],
         \ node,
-        \ a:fname,
+        \ path_text,
         \ )
 endfunction "  }}}2
 
@@ -246,14 +259,17 @@ function! s:v_tline(title)                                                      
 endfunction "  }}}2
 
 function! s:v_iline(item)                                                            " {{{2
-  let max_text_width = 62
-  if len(a:item.text) > max_text_width
-    let text = a:item.text[:55] . ' ...'
+  " compose item line for display
+  " limit whole line width to 80
+  " IDEA!: wrap long text without truncation
+  let text_width = 58
+  if len(a:item.text) > text_width
+    let text = a:item.text[:text_width - 3 - 1] . '...'
   else
     let text = a:item.text
   endif
 
-  return printf('%s%s %-' . max_text_width . 's %s',
+  return printf('%s%s %-' . text_width . 's %s',
         \ s:v_iline_prefix,
         \ s:symbol[a:item.priority],
         \ text,
@@ -272,8 +288,9 @@ function! s:v_open_win(...)                                                     
     endif
   endfor
 
-  " else query open a new window
+  " else query & open in a new window
   call Qpen(bufname)
+  vertical resize 80
   let s:v_bufnr = bufnr('%')
   set filetype=mdxtodo
 endfunction " }}}2
@@ -291,10 +308,9 @@ function! s:v_is_item_line(line)                                                
 endfunction "  }}}2
 
 function! s:v_seek_fline(lnum, which)                                                " {{{2
+  " TODO!!!: a test suite for s:v_seek_fline()
   " a:lnum is for line()
-  " a:which accepts 2 kinds of values:
-  " - a string that is one of 'next', 'cur', 'prev'
-  " - a line number
+  " a:which accepts one of 'next', 'cur', 'prev'
   " return:
   "   line number if a valid fline is found
   "   0 if not found
@@ -308,13 +324,15 @@ function! s:v_seek_fline(lnum, which)                                           
         \ 'prev' : 'Wb',
         \ }
 
-  call cursor(line(a:lnum), 1)
+  call cursor(a:lnum, 1)
 
   let lnum = 0
   if a:which =~ 'next\|cur\|prev'
     let lnum = search(s:v_fline_prefix, flags[a:which])
-  elseif type(a:which) == type(1)
-    let lnum = a:which
+    if a:which == 'prev'
+      call cursor(lnum, 1)
+      let lnum = search(s:v_fline_prefix, flags[a:which])
+    endif
   else
     echoerr printf(
           \ 'a:which (%s) need a string of  [next, cur, prev] or a line number',
@@ -329,6 +347,7 @@ function! s:v_seek_fline(lnum, which)                                           
 
   return lnum
 endfunction " }}}2
+let g:Test = function('s:v_seek_fline')
 
 function! s:v_line2fname(line)                                                       " {{{2
   if ! s:v_is_fline(a:line)
@@ -337,6 +356,31 @@ function! s:v_line2fname(line)                                                  
 
   return substitute(a:line, s:v_fline_prefix . ' .', '', '')
 endfunction " }}}2
+
+function! s:v_lnum2fname(lnum) " {{{2
+  " a:lnum must be line number of a valid file line
+  " this function is suppose to be used in conjunction with s:v_seek_fline()
+  " to get the un-truncated absolute file path stored in s:m_items
+  if !s:v_is_fline(getline(a:lnum))
+    echoerr printf('%d is not a valid file line line number', a:lnum)
+  endif
+
+  let fnames = uniq(map(copy(s:m_items), 'v:val.fname'))
+
+  let i = 0
+  let ln = s:v_seek_fline(1, 'next')
+  while ln != a:lnum
+    let i += 1
+    if i > len(fnames) - 1
+      throw 'over loop'
+    endif
+
+    let ln = s:v_seek_fline(ln, 'next')
+  endwhile
+
+  return fnames[i]
+endfunction " }}}2
+let g:Test1 = function('s:v_lnum2fname')
 
 function! s:v_lnum2item(lnum)                                                        " {{{2
   " a:lnum are the same as line(lnum)
@@ -351,7 +395,7 @@ function! s:v_lnum2item(lnum)                                                   
   let lnum = matchstr(line, '\d\+\ze\s*$') + 0
 
   " get file path
-  let fname = s:v_line2fname(getline(s:v_seek_fline(lnum, 'cur')))
+  let fname = s:v_lnum2fname(s:v_seek_fline(lnum, 'cur'))
 
   " look up the item by filename & lnum
   let items = filter(copy(s:m_items),
@@ -435,7 +479,7 @@ function! mudox#todo#v_nav_sec(which, ...)                                      
   let lnum = s:v_seek_fline('.', a:which)
 
   if lnum
-    let fname = s:v_line2fname(getline(lnum))
+    let fname = s:v_lnum2fname(lnum)
     if a:0 == 1 && a:1 == 1
       let s:v.fold = {fname : 1}
     endif
@@ -458,14 +502,15 @@ function! mudox#todo#v_goto_source()                                            
 endfunction "  }}}2
 
 function! mudox#todo#v_toggle_section_fold()                                         " {{{2
-  let fline = getline(s:v_seek_fline('.', 'cur'))
-  if fline == ''
+  let lnum = (s:v_seek_fline('.', 'cur'))
+  if lnum == 0
     return
   endif
 
-  let fname = s:v_line2fname(fline)
-  let folded = ! (fline =~ s:symbol.unfolded)
-  let s:v.fold[fname] = folded
+  let fline = getline(lnum)
+  let fname = s:v_lnum2fname(lnum)
+  let unfolded = ! (fline =~ s:symbol.unfolded)
+  let s:v.fold[fname] = unfolded
   call mudox#todo#v_refresh()
 
   call search(fname, 'w')
