@@ -459,6 +459,8 @@ function! mudox#todo#v_toggle_section_fold()                                    
   let folded = ! (fline =~ s:symbol.unfolded)
   let s:v.fold[fname] = folded
   call mudox#todo#v_refresh()
+
+  call search(fname, 'w')
 endfunction " }}}2
 
 function! mudox#todo#v_refresh()                                                     " {{{2
