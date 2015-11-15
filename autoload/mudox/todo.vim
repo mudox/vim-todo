@@ -142,6 +142,17 @@ function! s:m_collect()                                                         
   call s:m_sort_items()
 endfunction "  }}}2
 
+function! s:m_fname_set()                                                            " {{{2
+  let fnames = []
+  let fname = ''
+  for item in s:m_items
+    if item.fname != fname
+      let fname = item.fname
+      call add(fnames, fname)
+    endif
+  endfor
+  return fnames
+endfunction " }}}2
 " }}}1
 
 " THE VIEW                                                                             {{{1
@@ -334,11 +345,23 @@ function! s:v_lnum2item(lnum)                                                   
   return items[0]
 endfunction "  }}}2
 
-function! s:v_toggle_folding()                                                       " {{{2
-  " TODO!!: implement ui_toggle_folding()
-endfunction " }}}2
-
 " mapping implementations ------------------------------
+
+function! mudox#todo#v_toggle_folding()                                              " {{{2
+  let unfold_all = 1
+  for unfolded in values(s:v.fold)
+    if unfolded
+      let unfold_all = 0
+      break
+    endif
+  endfor
+
+  for fname in s:m_fname_set()
+    let s:v.fold[fname] = unfold_all
+  endfor
+
+  call mudox#todo#v_refresh()
+endfunction " }}}2
 
 function! mudox#todo#v_change_priority(delta)                                        " {{{2
   let col = col('.')
@@ -384,7 +407,7 @@ function! mudox#todo#v_change_priority(delta)                                   
   let &startofline = startofline
 endfunction "  }}}2
 
-function! mudox#todo#v_nav_sec(which, ...)                                              " {{{2
+function! mudox#todo#v_nav_sec(which, ...)                                           " {{{2
   " accepts:
   "   a:which: ['next', 'prev', 'cur']
   "   a:1    : 1 to only unfold this section
@@ -441,8 +464,8 @@ function! mudox#todo#main()                                                     
   call mudox#todo#v_refresh()
 endfunction "  }}}1
 
-" LOGGING & DEBUG {{{1
-function! s:dbg_log(...) " {{{2
+" LOGGING & DEBUG                                                                      {{{1
+function! s:dbg_log(...)                                                             " {{{2
   redir! > /tmp/vim-todo.log
 
   echo 's:m_items ----'
