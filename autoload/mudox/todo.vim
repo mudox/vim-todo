@@ -290,7 +290,6 @@ function! s:v_open_win(...)                                                     
 
   " else query & open in a new window
   call Qpen(bufname)
-  vertical resize 80
   let s:v_bufnr = bufnr('%')
   set filetype=mdxtodo
 endfunction " }}}2
@@ -321,18 +320,20 @@ function! s:v_seek_fline(lnum, which)                                           
   let flags = {
         \ 'next' : 'W',
         \ 'cur'  : 'Wbc',
-        \ 'prev' : 'Wb',
         \ }
 
   call cursor(a:lnum, 1)
 
   let lnum = 0
-  if a:which =~ 'next\|cur\|prev'
+  if a:which =~ 'next\|cur'
     let lnum = search(s:v_fline_prefix, flags[a:which])
-    if a:which == 'prev'
-      call cursor(lnum, 1)
-      let lnum = search(s:v_fline_prefix, flags[a:which])
+  elseif a:which =~ 'prev'
+    let lnum = search(s:v_fline_prefix, flags['cur'])
+    if lnum == 0 || lnum == 1
+      return 0
     endif
+    call cursor(lnum - 1, 2)
+    let lnum = search(s:v_fline_prefix, flags['cur'])
   else
     echoerr printf(
           \ 'a:which (%s) need a string of  [next, cur, prev] or a line number',
@@ -357,7 +358,7 @@ function! s:v_line2fname(line)                                                  
   return substitute(a:line, s:v_fline_prefix . ' .', '', '')
 endfunction " }}}2
 
-function! s:v_lnum2fname(lnum) " {{{2
+function! s:v_lnum2fname(lnum)                                                       " {{{2
   " a:lnum must be line number of a valid file line
   " this function is suppose to be used in conjunction with s:v_seek_fline()
   " to get the un-truncated absolute file path stored in s:m_items
@@ -392,14 +393,14 @@ function! s:v_lnum2item(lnum)                                                   
   endif
 
   " get line number
-  let lnum = matchstr(line, '\d\+\ze\s*$') + 0
+  let ln = matchstr(line, '\d\+\ze\s*$') + 0
 
   " get file path
-  let fname = s:v_lnum2fname(s:v_seek_fline(lnum, 'cur'))
+  let fname = s:v_lnum2fname(s:v_seek_fline(a:lnum, 'cur'))
 
   " look up the item by filename & lnum
   let items = filter(copy(s:m_items),
-        \ 'v:val.fname == fname && v:val.lnum == lnum')
+        \ 'v:val.fname == fname && v:val.lnum == ln')
 
   if len(items) != 1
     echoerr printf('%d matching items filtered, must be 1', len(items))
@@ -531,6 +532,8 @@ endfunction "  }}}2
 " }}}1
 
 function! mudox#todo#main()                                                          " {{{1
+  " TODO!!!: rethink about the window open way
+  " TODO!!!: rethink about lien width limitation policy
   try
     call s:v_open_win()
   catch /^Qpen: Canceled$/
