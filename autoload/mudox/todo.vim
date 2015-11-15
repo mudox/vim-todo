@@ -139,7 +139,13 @@ function! s:m_collect()                                                         
     endif
   endfor
 
-  call s:m_sort_items()
+  if len(s:m_items) != 0
+    call s:m_sort_items()
+  else
+    echohl WarningMsg
+    echo 'TODO LIST: no todo list collect'
+    echohl None
+  endif
 endfunction "  }}}2
 
 function! s:m_fname_set()                                                            " {{{2
