@@ -1,5 +1,5 @@
 " vim: fdm=marker
-" GUARD                                                                              {{{1
+" GUARD                                                                                {{{1
 if exists("s:loaded") || &cp || version < 700
   finish
 endif
@@ -13,12 +13,12 @@ scriptencoding utf8
 " TODO: need to honor user's choice
 let s:symbol = {
       \ 'folded'   : '',
-      \ 'lnum'   : ' ',
+      \ 'unfolded' : '',
+      \ 'lnum'     : ' ',
       \ 'p!!!'     : '',
       \ 'p!!'      : ' ',
       \ 'p!'       : '  ',
       \ 'p'        : '   ',
-      \ 'unfolded' : '',
       \ }
 let mudox#todo#symbol = s:symbol
 
@@ -29,22 +29,30 @@ let s:titles = [
       \ 'INFO',
       \ ]
 
-" THE MODEL                                                                          {{{1
-" TODO: need heavy refactor for model structure
+" THE MODEL                                                                            {{{1
+
+" the model object & it's old snapshot
+" each item in it is a dict has keys:
+"  fname: absolute path name
+"  lnum: line number
+"  ---
+"  title: one of word from s:titles
+"  priority: one of ['p', 'p!', 'p!!', 'p!!!']
+"  text: text after 'TITLE:'
+let s:m_items_old = []
 let s:m_items = []
 
-function! s:m_get_fname_set()                                                      " {{{2
-  let fname_set = {}
-  for item in s:m_items
-    let fname_set[item.fname] = 1
-  endfor
-  return keys(fname_set)
-endfunction " }}}2
+" fallback pattern used to parse files unloaded, capture groups are:
+" [title, priority, text]
+let s:m_pattern = '^.*\(' . join(s:titles, '\|') . '\)'
+      \ . '\(!\{,3}\)'
+      \ . '\s*:\s*'
+      \ . '\(.*\)\s*$'
 
-function! s:m_sort()                                                               " {{{2
+function! s:m_sort_items()                                                           " {{{2
   function! s:sort_by_lnum(l, r)
-    let left = a:l.priority
-    let right = a:r.priority
+    let left = a:l.lnum
+    let right = a:r.lnum
     return left == right ? 0 : left < right ? 1 : -1
   endfunction
 
@@ -67,14 +75,55 @@ function! s:m_sort()                                                            
     return left == right ? 0 : left > right ? 1 : -1
   endfunction
 
+  call sort(s:m_items, 's:sort_by_lnum')
   call sort(s:m_items, 's:sort_by_priority')
   call sort(s:m_items, 's:sort_by_title')
   call sort(s:m_items, 's:sort_by_fname')
 endfunction "  }}}2
 
-function! s:m_collect()                                                            " {{{2
-  " TODO: need to return them back to under s: scope
-  let items = []
+function! s:m_collect_buf(bufnr)                                                     " {{{2
+  " INFO!!!: try use fallback pattern here to see the effect
+  "let comment_marker = split(getbufvar(a:bufnr, '&commentstring'), '%s')[0]
+  "let pattern = '\(' . join(s:titles, '\|') . '\)' . '\(!\{,3}\)'
+  "let pattern = printf('^\s*%s\s*%s:\s*', comment_marker, pattern)
+
+  let lines = getbufline(a:bufnr, 1, '$')
+  for idx in range(len(lines))
+    let line = lines[idx]
+    if line =~ s:m_pattern
+      let item        = {}
+
+      let item.lnum = idx + 1
+      let item.fname  = fnamemodify(bufname(a:bufnr), ':p')
+      let [item.title, item.priority, item.text] = matchlist(line, s:m_pattern)[1:3]
+      let item.priority = 'p' . item.priority
+
+      call add(s:m_items, item)
+    endif
+  endfor
+endfunction " }}}2
+
+function! s:m_collect_file(fname)                                                    " {{{2
+  " TODO: implement s:m_collect_file(fname)
+  let lines = readfile(a:fname)
+  for idx in range(len(lines))
+    let line = lines[idx]
+    if line =~ s:m_pattern
+      let item        = {}
+
+      let item.lnum = idx + 1
+      let item.fname  = fnamemodify(a:fname, ':p')
+      let [item.title, item.priority, item.text] =
+            \ matchlist(line, s:m_pattern)[1:3]
+      let item.priority = 'p' . item.priority
+
+      call add(s:m_items, item)
+    endif
+  endfor
+endfunction " }}}2
+
+function! s:m_collect()                                                              " {{{2
+  let s:m_items = []
 
   " IDEA!!: is asynchronization necessary?
   " IDEA!: arg list can be handled by `ag`, add it in?
@@ -82,86 +131,54 @@ function! s:m_collect()                                                         
   " INFO: currently only watching listed buffers whose buftype is normal
   for bufnr in range(1, bufnr('$'))
     if bufexists(bufnr) && buflisted(bufnr) && getbufvar(bufnr, '&buftype') == ''
-      call extend(items, s:m_collect_from_bufnr(bufnr))
+      if bufloaded(bufnr)
+        call s:m_collect_buf(bufnr)
+      else
+        call s:m_collect_file(bufname(bufnr))
+      end
     endif
   endfor
 
-  return items
+  call s:m_sort_items()
 endfunction "  }}}2
-
-function! s:m_collect_from_bufnr(bufnr)                                            " {{{2
-  " TODO!!!: implement s:m_collect_from_bufnr()
-  let items = []
-
-  let s:comment_marker = split(getbufvar(a:bufnr, '&commentstring'), '%s')[0]
-  let s:pattern = '\(' . join(s:titles, '\|') . '\)' . '\(!\{,3}\)'
-  let s:pattern = printf('^\s*%s\s*%s:\s*', s:comment_marker, s:pattern)
-  let g:pattern = s:pattern
-
-  let lines = getbufline(a:bufnr, 1, '$')
-  for lnum in range(1, len(lines))
-    if lines[lnum - 1] =~ s:pattern
-      let item        = {}
-      let item.bufnr  = a:bufnr
-      let item.lnum = lnum
-      let item.fname  = fnamemodify(bufname(a:bufnr), ':p')
-
-      let line = lines[lnum - 1]
-      let [item.title, item.priority] = matchlist(line, s:pattern)[1:2]
-      " possible value: p, p!, p!!, p!!!
-      let item.priority = 'p' . item.priority
-
-      let item.text = line[matchend(line, s:pattern) : ]
-
-      call add(items, item)
-    endif
-  endfor
-
-  return items
-endfunction " }}}2
 
 " }}}1
 
-" THE VIEW                                                                           {{{1
-let s:v_stat = {}
+" THE VIEW                                                                             {{{1
+" the view status object & it's old snapshot
+let s:v_old = {}
+let s:v = {}
 
-" a list of fname whose section is unfoled when shown
-let s:v_stat.unfolded = []
+" fold[fname]: 1 for unfold, 0 for fold
+let s:v.fold = {}
 
 " patterns used for line identifying & highlighting
-let s:v_fline_prefix = printf(' \(%s\|%s\)',
-      \ s:symbol.folded, s:symbol.unfolded)
+let s:v_tline_prefix = '   └'
+let s:v_fline_prefix = printf(' \(%s\|%s\)', s:symbol.folded, s:symbol.unfolded)
 let mudox#todo#v_fline_prefix = s:v_fline_prefix
+let s:v_iline_prefix = repeat("\x20", 6)
 
-function! s:v_show(...)                                                            " {{{2
-  " if arg1 is given (file path list), then only unfold this file's secition
+function! s:v_show()                                                                 " {{{2
 
-  if a:0 == 1
-    let fname_set = s:m_fname_set()
-    for fname in a:1
-      if index(fname_set, fname) == -1
-        echoerr prinf('arg1 (%s) not in file list', a:1)
-      endif
-    endfor
-    let s:v_stat.unfolded = a:1
-  elseif a:0 == 0
-    let s:v_stat.unfolded = s:m_get_fname_set()
-  else
-    echoerr 'need 0 or 1 argument (file name)'
+  " only draw when model & view status changed
+  if s:v_old == s:v && s:m_items_old == s:m_items
+    return
   endif
 
-  call s:m_sort()
+  let s:v_old = deepcopy(s:v)
+  let s:m_items_old = deepcopy(s:m_items)
 
   let fname = ''
   let title = ''
   let lines = []
   for item in s:m_items
-
     " print file line if entering a new file section
+    let unfolded = get(s:v.fold, item.fname, 0)
+
     if item.fname != fname
       let fname = item.fname
       let fileline = s:v_fline(fname,
-            \ (index(s:v_stat.unfolded, fname) == -1) ? 'folded' : 'unfolded')
+            \ unfolded ? 'unfolded' : 'folded')
 
       " first line MUST be empty line
       call extend(lines, [
@@ -170,8 +187,12 @@ function! s:v_show(...)                                                         
             \ ])
     endif
 
-    " print title lines & item lines if current section unfolded
-    if index(s:v_stat.unfolded, fname) != -1
+    "if !unfolded
+      "continue
+    "endif
+
+    " print title lines & item lines if current section is unfolded
+    if get(s:v.fold, fname, 0)
       " print title line if entering a new title section
       if item.title != title
         let title = item.title
@@ -179,18 +200,18 @@ function! s:v_show(...)                                                         
       endif
       call add(lines, s:v_iline(item))
     endif
+
   endfor
 
   setlocal modifiable
-  %d_
+  silent %d_
   call append(0, lines) " last line MUST be empty line
   setlocal nomodifiable
-  normal! 1G
 endfunction "  }}}2
 
-function! s:v_fline(fname, folded)                                                 " {{{2
+function! s:v_fline(fname, folded)                                                   " {{{2
 
-  " TODO: when closed show how many items it have
+  " TODO!!: when closed show how many items it have
   let node = (a:folded == 'folded') ? ' ' : '┐'
   return printf(' %s %s%s',
         \ s:symbol[a:folded],
@@ -199,12 +220,11 @@ function! s:v_fline(fname, folded)                                              
         \ )
 endfunction "  }}}2
 
-function! s:v_tline(title)                                                         " {{{2
-  let s:title_line_prefix = '   └'
-  return printf('%s %s:', s:title_line_prefix, a:title)
+function! s:v_tline(title)                                                           " {{{2
+  return printf('%s %s:', s:v_tline_prefix, a:title)
 endfunction "  }}}2
 
-function! s:v_iline(item)                                                          " {{{2
+function! s:v_iline(item)                                                            " {{{2
   let max_text_width = 62
   if len(a:item.text) > max_text_width
     let text = a:item.text[:55] . ' ...'
@@ -212,82 +232,98 @@ function! s:v_iline(item)                                                       
     let text = a:item.text
   endif
 
-  let s:item_line_prefix = repeat("\x20", 6)
   return printf('%s%s %-' . max_text_width . 's %s',
-        \ s:item_line_prefix,
+        \ s:v_iline_prefix,
         \ s:symbol[a:item.priority],
         \ text,
         \ printf('%s %s', s:symbol.lnum, a:item.lnum),
         \ )
 endfunction "  }}}2
 
-function! s:v_open_win(...)                                                        " {{{2
+function! s:v_open_win(...)                                                          " {{{2
   " TODO!!: Qpen() here, and Qpen() need to change it's throw habit
   tab drop *TODO*
   let s:bufnr = bufnr('%')
   set filetype=mdxtodo
 endfunction " }}}2
 
-function! s:v_is_fline(line)                                                       " {{{2
+function! s:v_is_fline(line)                                                         " {{{2
   return a:line =~ '^' . s:v_fline_prefix
 endfunction "  }}}2
 
-function! s:v_is_tline(line)                                                       " {{{2
-  return a:line =~ '^' . s:title_line_prefix
+function! s:v_is_tline(line)                                                         " {{{2
+  return a:line =~ '^' . s:v_tline_prefix
 endfunction "  }}}2
 
-function! s:v_is_item_line(line)                                                   " {{{2
-  return a:line =~ '^' . s:item_line_prefix
+function! s:v_is_item_line(line)                                                     " {{{2
+  return a:line =~ '^' . s:v_iline_prefix
 endfunction "  }}}2
 
-function! s:v_line2fname(which)                                                    " {{{2
-  " TODO!!!: refactor it with new parameter types
-  " a:which accepts 2 kinds of values,
-  "   a string that is one of 'next', 'cur', 'prev'
-  "   a line number
+function! s:v_seek_fline(lnum, which)                                                " {{{2
+  " a:lnum is for line()
+  " a:which accepts 2 kinds of values:
+  " - a string that is one of 'next', 'cur', 'prev'
+  " - a line number
+  " return:
+  "   line number if a valid fline is found
+  "   0 if not found
+  " keep the cursor within the function body
+
+  let pos = getcurpos()
 
   let flags = {
-        \ 'next' : 'Wn',
-        \ 'cur'  : 'Wnbc',
-        \ 'prev' : 'Wnbc',
+        \ 'next' : 'W',
+        \ 'cur'  : 'Wbc',
+        \ 'prev' : 'Wb',
         \ }
+
+  call cursor(line(a:lnum), 1)
 
   let lnum = 0
   if a:which =~ 'next\|cur\|prev'
     let lnum = search(s:v_fline_prefix, flags[a:which])
-    if a:which == 'prev'
-      let lnum = search(s:v_fline_prefix, flags[a:which])
-    endif
   elseif type(a:which) == type(1)
     let lnum = a:which
   else
     echoerr printf(
-          \ 'a:which (= %s) need a string of  [next, cur, prev] or a line number',
+          \ 'a:which (%s) need a string of  [next, cur, prev] or a line number',
           \ a:which,
           \ )
   endif
 
-  " first & last line must be empty line, can not be valid file line
-  if lnum == 0 || lnum == line('$')
-    return ''
-  endif
+  let startofline = &startofline
+  set nostartofline
+  call setpos('.', pos)
+  let &startofline = startofline
 
-  return substitute(getline(lnum), s:v_fline_prefix . ' .', '', '')
+  return lnum
 endfunction " }}}2
 
-function! s:v_line2item()                                                          " {{{2
-  if ! s:v_is_item_line(getline('.'))
+function! s:v_line2fname(line)                                                       " {{{2
+  if ! s:v_is_fline(a:line)
+    echoerr printf('invalid fname line: %s', a:line)
+  endif
+
+  return substitute(a:line, s:v_fline_prefix . ' .', '', '')
+endfunction " }}}2
+
+function! s:v_lnum2item(lnum)                                                        " {{{2
+  " a:lnum are the same as line(lnum)
+
+  let line = getline(a:lnum)
+
+  if ! s:v_is_item_line(line)
     return {}
   endif
 
   " get line number
-  let lnum = matchstr(getline('.'), '\d\+\ze\s*$') + 0
+  let lnum = matchstr(line, '\d\+\ze\s*$') + 0
 
   " get file path
   let fname = ''
   for nr in range(line('.'), 1, -1)
     if s:v_is_fline(getline(nr))
-      let fname = s:v_line2fname(nr)
+      let fname = s:v_seek_fline(nr)
       break
     endif
   endfor
@@ -301,21 +337,21 @@ function! s:v_line2item()                                                       
   echoerr printf('fail looking up item: %s|%s', fname, lnum)
 endfunction "  }}}2
 
-function! s:v_goto_section()                                                       " {{{2
+function! s:v_goto_section()                                                         " {{{2
   " TODO!!!: implement ui_goto_section()
 endfunction " }}}2
 
-function! s:v_toggle_folding()                                                     " {{{2
-  " TODO!!!: implement ui_toggle_folding()
+function! s:v_toggle_folding()                                                       " {{{2
+  " TODO!!: implement ui_toggle_folding()
 endfunction " }}}2
 
 " mapping implementations ------------------------------
 
-function! mudox#todo#v_change_priority(delta)                                               " {{{2
+function! mudox#todo#v_change_priority(delta)                                        " {{{2
   let col = col('.')
 
   " figure out the new priority: new_priority
-  let item = s:v_line2item()
+  let item = s:v_lnum2item(line('.'))
   if empty(item)
     return
   endif
@@ -328,7 +364,7 @@ function! mudox#todo#v_change_priority(delta)                                   
     return
   endif
 
-  " TODO!!!: need to add data view synchronization way
+  " TODO!!: need to add data view synchronization way
 
   " re-sort the items & re-show
   call s:v_show()
@@ -347,7 +383,6 @@ function! mudox#todo#v_change_priority(delta)                                   
   call setline(item.lnum, line)
   update
 
-  " jump back to *TODO* buffer
   execute printf('buffer! %s', s:bufnr)
 
   let startofline = &startofline
@@ -356,35 +391,27 @@ function! mudox#todo#v_change_priority(delta)                                   
   let &startofline = startofline
 endfunction "  }}}2
 
-function! mudox#todo#v_nav_section(dir)                                                     " {{{2
-  let pos = getcurpos()
+function! mudox#todo#v_nav_sec(which, ...)                                              " {{{2
+  " accepts:
+  "   a:which: ['next', 'prev', 'cur']
+  "   a:1    : 1 to only unfold this section
 
-  let lnum = 0
-  if a:dir == -1
-    let lnum = search(s:v_fline_prefix, 'Wb')
-    let lnum = search(s:v_fline_prefix, 'Wb')
-  elseif a:dir == 1
-    let lnum = search(s:v_fline_prefix, 'W')
-  else
-    echoerr printf('a:dir (= %s) need -1 or 1', a:dir)
+  let lnum = s:v_seek_fline('.', a:which)
+
+  if lnum
+    let fname = s:v_line2fname(getline(lnum))
+    if a:0 == 1 && a:1 == 1
+      let s:v.fold = {fname : 1}
+    endif
+
+    call s:v_show()
+
+    call search(fname, 'w')
   endif
-
-  if lnum == 0
-    let startofline = &startofline
-    set nostartofline
-    call setpos('.', pos)
-    let &startofline = startofline
-    return
-  endif
-
-  let fname = s:v_line2fname(lnum)
-  call s:v_show([fname])
-
-  call search(fname)
 endfunction " }}}2
 
-function! mudox#todo#v_goto_source()                                                        " {{{2
-  let item = s:v_line2item()
+function! mudox#todo#v_goto_source()                                                 " {{{2
+  let item = s:v_lnum2item('.')
   if empty(item)
     return
   endif
@@ -394,79 +421,19 @@ function! mudox#todo#v_goto_source()                                            
   silent! normal! zO
 endfunction "  }}}2
 
-function! mudox#todo#v_toggle_fold()                                                     " {{{2
-  let pos = getcurpos()
-
-  let line = getline('.')
-
-  let start_nr = 0
-  let end_nr = 0
-
-  if line =~ s:symbol.folded
-
-    " unfold section
-    let lnum = line('.')
-    let fname = s:v_line2fname(lnum)
-    let lines = []
-    for i in range(len(s:m_items) - 1)
-      if s:m_items[i].fname == fname
-        let j = i
-        let title = ''
-        while j < len(s:m_items) && s:m_items[j].fname == fname
-          if s:m_items[j].title != title
-            let title = s:m_items[j].title
-            call add(lines, s:v_tline(title))
-          endif
-          call add(lines, s:v_iline(s:m_items[j]))
-          let j += 1
-        endwhile
-        break
-      endif
-    endfor
-
-    setlocal modifiable
-    call setline(lnum, s:v_fline(fname, 'unfolded'))
-    call append('.', lines)
-    setlocal nomodifiable
-
-    let startofline = &startofline
-    set nostartofline
-    call setpos('.', pos)
-    let &startofline = startofline
-
-  elseif line =~ s:symbol.unfolded || s:v_is_tline(line) || s:v_is_item_line(line)
-
-    " fold section
-    let lnum = line('.')
-    for i in range(lnum, line('$'))
-      if getline(i) == ''
-        let end_nr = i - 1
-        break
-      endif
-    endfor
-
-    for i in range(lnum, 1, -1)
-      if s:v_is_fline(getline(i))
-        let start_nr = i + 1
-        break
-      endif
-    endfor
-
-    setlocal modifiable
-    silent execute printf('%s,%sd _', start_nr, end_nr)
-    let fname = s:v_line2fname(start_nr - 1)
-    call setline(start_nr - 1, s:v_fline(fname, 'folded'))
-    setlocal nomodifiable
-
-    normal! gk
-  endif
-
+function! mudox#todo#v_toggle_section_fold()                                         " {{{2
+  let fline = getline(s:v_seek_fline('.', 'cur'))
+  let fname = s:v_line2fname(fline)
+  let folded = ! (fline =~ s:symbol.unfolded)
+  let s:v.fold[fname] = folded
+  call mudox#todo#v_refresh()
 endfunction " }}}2
 
-function! mudox#todo#v_refresh()                                                            " {{{2
+function! mudox#todo#v_refresh()                                                     " {{{2
   let pos = getcurpos()
 
-  call MakeToDo()
+  call s:m_collect()
+  call s:v_show()
 
   let startofline = &startofline
   set nostartofline
@@ -474,45 +441,17 @@ function! mudox#todo#v_refresh()                                                
   let &startofline = startofline
 endfunction "  }}}2
 
-function! mudox#todo#v_only_unfold_current_section()                                        " {{{2
-  " TODO!!!: implement ui_only_unfold_current_section()
-  let fname = s:v_line2fname('cur')
-
-  let on_file_line = 0
-  let col = 0
-  let off = 0
-
-  if s:v_is_fline(line('.'))
-    let on_file_line = 1
-  else
-    let col = col('.')
-    let off = line('.') - search(fname, 'w')
-  endif
-
-  if !empty(fname)
-    call s:v_show([fname])
-  endif
-
-  if on_file_line
-    call search(fname, 'w')
-  else
-    let lnum = search(fname, 'w') + off
-    let startofline = &startofline
-    set nostartofline
-    call cursor(lnum, col)
-    let &startofline = startofline
-  endif
-endfunction " }}}2
-
 " }}}1
 
-function! mudox#todo#main()                                                        " {{{1
+function! mudox#todo#main()                                                          " {{{1
   call s:v_open_win()
-
-  let items = s:m_collect()
-
-  if s:m_items != items
-    let s:m_items = items
-    call s:v_show()
-  endif
+  call mudox#todo#v_refresh()
 endfunction "  }}}1
+
+function! Mdx()                                                                      " {{{1
+  for i in s:m_items
+    echo i
+  endfor
+  echo '----'
+  echo s:v
+endfunction " }}}1
