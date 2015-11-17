@@ -9,17 +9,19 @@ let s:loaded = 1
 scriptencoding utf8
 
 " IDEA!!!: add each mapping's doc text within its' corresponding function.
-" TODO: need a fallback suite of symbols
+" TODO!!!: need a fallback suite of symbols
 " TODO: need to honor user's choice
 let s:symbol = {
-      \ 'folded'    : '',
-      \ 'unfolded'  : '',
-      \ 'lnum'      : ' ',
-      \ 'fline_cnt' : ' ',
-      \ 'p!!!'      : '',
-      \ 'p!!'       : ' ',
-      \ 'p!'        : '  ',
-      \ 'p'         : '   ',
+      \ 'folded'        : ''    ,
+      \ 'unfolded'      : ''    ,
+      \ 'lnum'          : ' '   ,
+      \ 'lnum_active'   : ' '   ,
+      \ 'lnum_inactive' : ' '   ,
+      \ 'fline_cnt'     : ' '   ,
+      \ 'p!!!'          : ''  ,
+      \ 'p!!'           : ' '  ,
+      \ 'p!'            : '  '  ,
+      \ 'p'             : '   '  ,
       \ }
 let mudox#todo#symbol = s:symbol
 
@@ -340,7 +342,9 @@ function! s:v_iline(item)                                                       
   endif
 
   let fmt = printf(' %%s %%-%dd', s:v.max_lnum_width)
-  let suffix = printf(fmt, s:symbol.lnum, a:item.lnum)
+  let suffix_symbol = s:v_opened_win(a:item.fname)
+        \ ? s:symbol.lnum_active : s:symbol.lnum_inactive
+  let suffix = printf(fmt, suffix_symbol, a:item.lnum)
 
   let fmt = printf('%%s%%s %%-%ds%%s', text_width)
   return printf(fmt,
