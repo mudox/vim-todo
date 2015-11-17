@@ -12,13 +12,15 @@ scriptencoding utf8
 " TODO: need a fallback suite of symbols
 " TODO: need to honor user's choice
 let s:symbol = {
-      \ 'folded'   : '',
-      \ 'unfolded' : '',
-      \ 'lnum'     : ' ',
-      \ 'p!!!'     : '',
-      \ 'p!!'      : ' ',
-      \ 'p!'       : '  ',
-      \ 'p'        : '   ',
+      \ 'folded'    : '',
+      \ 'unfolded'  : '',
+      \ 'lnum'      : ' ',
+      \ 'fline_cnt' : ' ',
+      \ 'tline_cnt' : ' ',
+      \ 'p!!!'      : '',
+      \ 'p!!'       : ' ',
+      \ 'p!'        : '  ',
+      \ 'p'         : '   ',
       \ }
 let mudox#todo#symbol = s:symbol
 
@@ -189,12 +191,15 @@ let s:v_iline_prefix = repeat("\x20", 6)
 function! s:v_show()                                                                 " {{{2
 
   " only draw when model & view status changed
-  if s:v_old == s:v && s:m_items_old == s:m_items
+  if s:v_old == s:v
+        \ && s:m_items_old == s:m_items
+        \ && s:v_old_pane_width == winwidth(winnr())
     return
   endif
 
   let s:v_old = deepcopy(s:v)
   let s:m_items_old = deepcopy(s:m_items)
+  let s:v_old_pane_width = winwidth(winnr())
 
   let fname = ''
   let title = ''
@@ -237,20 +242,39 @@ function! s:v_show()                                                            
 endfunction "  }}}2
 
 function! s:v_fline(fname, folded)                                                   " {{{2
-  " TODO!!: when closed show how many items it have
-  let path_width = 68
+  " a:folded: one of ['unfoled', 'folded']
+
+  " figure out path width
+  let pane_width = max([80, winwidth(winnr())])
+  let prefix_width = 4
+  " TODO: remove magic number for count_width
+  let count_width = 6
+  if a:folded == 'folded'
+    let path_width = pane_width - prefix_width - count_width
+  else
+    let path_width = pane_width - prefix_width
+  endif
 
   if len(a:fname) > path_width
-    let path_text = a:fname[:path_width - 3 - 1] . '...'
+    let path_text = a:fname[ : path_width - 3 - 1] . '...'
   else
     let path_text = a:fname
   endif
 
+  " items count text when section folded
+  let fline_cnt = len(filter(copy(s:m_items), 'v:val.fname == a:fname'))
+  let count_text = (a:folded == 'unfolded') ? ''
+        \ : printf('%s %-3s', s:symbol.fline_cnt, fline_cnt)
+
+  " node symbol
   let node = (a:folded == 'folded') ? ' ' : '┐'
-  return printf(' %s %s%s',
+
+  let fmt = printf(' %%s %%s%%-%ds%%s', path_width)
+  return printf(fmt,
         \ s:symbol[a:folded],
         \ node,
         \ path_text,
+        \ count_text,
         \ )
 endfunction "  }}}2
 
