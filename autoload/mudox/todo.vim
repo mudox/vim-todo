@@ -1,5 +1,5 @@
 " vim: fdm=marker
-" GUARD                                                                              {{{1
+" GUARD                                                                                {{{1
 if exists("s:loaded") || &cp || version < 700
   finish
 endif
@@ -32,7 +32,7 @@ let s:titles = [
       \ 'INFO',
       \ ]
 
-" THE MODEL                                                                          {{{1
+" THE MODEL                                                                            {{{1
 
 " the model object & it's old snapshot
 " each item in it is a dict has keys:
@@ -53,7 +53,7 @@ let s:m_pattern = '^.*\(' . join(s:titles, '\|') . '\)'
       \ . '\s*:\s*'
       \ . '\(.*\)\s*$'
 
-function! s:m_sort_items()                                                         " {{{2
+function! s:m_sort_items()                                                           " {{{2
   function! s:sort_by_lnum(l, r)
     let left = a:l.lnum
     let right = a:r.lnum
@@ -87,7 +87,7 @@ function! s:m_sort_items()                                                      
   lockvar s:m_items
 endfunction "  }}}2
 
-function! s:m_mkitem(fname, lnum, line)                                            " {{{2
+function! s:m_mkitem(fname, lnum, line)                                              " {{{2
   " parse line, if is a valid item line, construct a dict
   " {
   "   'fname'    :
@@ -113,7 +113,7 @@ function! s:m_mkitem(fname, lnum, line)                                         
   endif
 endfunction " }}}2
 
-function! s:m_collect_buf(bufnr)                                                   " {{{2
+function! s:m_collect_buf(bufnr)                                                     " {{{2
   let lines = getbufline(a:bufnr, 1, '$')
   let fname = fnamemodify(bufname(a:bufnr), ':p')
 
@@ -127,7 +127,7 @@ function! s:m_collect_buf(bufnr)                                                
   endfor
 endfunction " }}}2
 
-function! s:m_collect_file(fname)                                                  " {{{2
+function! s:m_collect_file(fname)                                                    " {{{2
   if !filereadable(a:fname)
     return
   endif
@@ -143,7 +143,7 @@ function! s:m_collect_file(fname)                                               
   endfor
 endfunction " }}}2
 
-function! s:m_add_item(item)                                                       " {{{2
+function! s:m_add_item(item)                                                         " {{{2
   " TODO: implement s:m_add_item(item)
   let w = len(string(a:item.lnum))
   if s:v.max_lnum_width < w
@@ -160,7 +160,7 @@ function! s:m_add_item(item)                                                    
   call add(s:m_items, a:item)
 endfunction " }}}2
 
-function! s:m_collect()                                                            " {{{2
+function! s:m_collect()                                                              " {{{2
   " reset stat data
   let s:v.max_lnum_width  = 0
   let s:v.max_fname_width = 0
@@ -195,7 +195,7 @@ function! s:m_collect()                                                         
   let s:v.max_cnt_width = len(string(len(s:m_items)))
 endfunction "  }}}2
 
-function! s:m_fname_set()                                                          " {{{2
+function! s:m_fname_set()                                                            " {{{2
   let fnames = []
   let fname = ''
   for item in s:m_items
@@ -208,7 +208,7 @@ function! s:m_fname_set()                                                       
 endfunction " }}}2
 " }}}1
 
-" THE VIEW                                                                           {{{1
+" THE VIEW                                                                             {{{1
 " the view status object & it's old snapshot
 let s:v_bufnr = 0
 
@@ -280,7 +280,7 @@ function! s:v_show()                                                            
   setlocal nomodifiable
 endfunction "  }}}2
 
-function! s:v_fline(fname, folded)                                                 " {{{2
+function! s:v_fline(fname, folded)                                                   " {{{2
   " a:folded: one of ['unfoled', 'folded']
 
   " figure out path width
@@ -316,16 +316,16 @@ function! s:v_fline(fname, folded)                                              
         \ )
 endfunction "  }}}2
 
-function! s:v_tline(title)                                                         " {{{2
+function! s:v_tline(title)                                                           " {{{2
   " TODO!!: add fancy symbol & item count to tline
   return printf('%s %s:', s:v_tline_prefix, a:title)
 endfunction "  }}}2
 
-function! s:v_is_tline(line)                                                       " {{{2
+function! s:v_is_tline(line)                                                         " {{{2
   return a:line =~ '^' . s:v_tline_prefix
 endfunction "  }}}2
 
-function! s:v_iline(item)                                                          " {{{2
+function! s:v_iline(item)                                                            " {{{2
   " compose item line for display
   let pane_width = max([80, winwidth(winnr())])
   let prefix_width = len(s:v_iline_prefix)
@@ -359,16 +359,29 @@ function! s:v_is_item_line(line)                                                
   return a:line =~ '^' . s:v_iline_prefix
 endfunction "  }}}2
 
+function! s:v_opened_win(fname)                                                      " {{{2
+  let bufnr = bufnr(a:fname)
+  if bufnr == -1
+    return 0
+  endif
+
+  for i in range(tabpagenr('$'))
+    if index(tabpagebuflist(i + 1), bufnr) != -1
+      return 1
+    endif
+  endfor
+
+  return 0
+endfunction " }}}2
+
 function! s:v_open_win(...)                                                          " {{{2
   let bufname = '\|TODO\ LIST\|'
 
   " if *TODO* window is open in some tabpage, jump to it
-  for i in range(tabpagenr('$'))
-    if index(tabpagebuflist(i + 1), s:v_bufnr) != -1
-      execute 'drop ' . bufname
-      return
-    endif
-  endfor
+  if s:v_opened_win(bufname)
+    execute 'drop ' . bufname
+    return
+  endif
 
   " else query & open in a new window
   call Qpen(bufname)
@@ -422,9 +435,8 @@ function! s:v_seek_fline(lnum, which)                                           
 
   return lnum
 endfunction " }}}2
-let g:Test = function('s:v_seek_fline')
 
-function! s:v_line2fname(line)                                                     " {{{2
+function! s:v_line2fname(line)                                                       " {{{2
   if ! s:v_is_fline(a:line)
     echoerr printf('invalid fname line: %s', a:line)
   endif
@@ -432,7 +444,7 @@ function! s:v_line2fname(line)                                                  
   return substitute(a:line, s:v_fline_prefix . ' .', '', '')
 endfunction " }}}2
 
-function! s:v_lnum2fname(lnum)                                                     " {{{2
+function! s:v_lnum2fname(lnum)                                                       " {{{2
   " a:lnum must be line number of a valid file line
   " this function is suppose to be used in conjunction with s:v_seek_fline()
   " to get the un-truncated absolute file path stored in s:m_items
@@ -455,9 +467,8 @@ function! s:v_lnum2fname(lnum)                                                  
 
   return fnames[i]
 endfunction " }}}2
-let g:Test1 = function('s:v_lnum2fname')
 
-function! s:v_lnum2item(lnum)                                                      " {{{2
+function! s:v_lnum2item(lnum)                                                        " {{{2
   " a:lnum are the same as line(lnum)
 
   let line = getline(a:lnum)
@@ -486,23 +497,20 @@ endfunction "  }}}2
 
 " mapping implementations ------------------------------
 
-function! mudox#todo#v_toggle_folding()                                            " {{{2
-  let unfold_all = 1
-  for unfolded in values(s:v.fold)
-    if unfolded
-      let unfold_all = 0
-      break
-    endif
-  endfor
+function! mudox#todo#v_toggle_folding()                                              " {{{2
+  let unfold = ! search('^' . s:v_iline_prefix, 'wcn')
 
-  for fname in s:m_fname_set()
-    let s:v.fold[fname] = unfold_all
+  for item in s:m_items
+    let s:v.fold[item.fname] = unfold
   endfor
 
   call mudox#todo#v_refresh()
 endfunction " }}}2
 
-function! mudox#todo#v_change_priority(delta)                                      " {{{2
+function! mudox#todo#v_change_priority(delta)                                        " {{{2
+  " TODO!!: check before changing priority
+  " check the existance of source line, if not prompt user to refresh first
+  " also change if it can be modified
   let col = col('.')
 
   " figure out the new priority: new_priority
@@ -546,7 +554,7 @@ function! mudox#todo#v_change_priority(delta)                                   
   let &startofline = startofline
 endfunction "  }}}2
 
-function! mudox#todo#v_nav_sec(which, ...)                                         " {{{2
+function! mudox#todo#v_nav_sec(which, ...)                                           " {{{2
   " accepts:
   "   a:which: ['next', 'prev', 'cur']
   "   a:1    : 1 to only unfold this section
@@ -557,15 +565,14 @@ function! mudox#todo#v_nav_sec(which, ...)                                      
     let fname = s:v_lnum2fname(lnum)
     if a:0 == 1 && a:1 == 1
       let s:v.fold = {fname : 1}
+      call s:v_show()
     endif
-
-    call s:v_show()
 
     call search(fname, 'w')
   endif
 endfunction " }}}2
 
-function! mudox#todo#v_goto_source()                                               " {{{2
+function! mudox#todo#v_goto_source()                                                 " {{{2
   let item = s:v_lnum2item('.')
   if empty(item)
     return
@@ -576,7 +583,7 @@ function! mudox#todo#v_goto_source()                                            
   silent! normal! zO
 endfunction "  }}}2
 
-function! mudox#todo#v_toggle_section_fold()                                       " {{{2
+function! mudox#todo#v_toggle_section_fold()                                         " {{{2
   let lnum = (s:v_seek_fline('.', 'cur'))
   if lnum == 0
     return
@@ -591,7 +598,7 @@ function! mudox#todo#v_toggle_section_fold()                                    
   call search(fname, 'w')
 endfunction " }}}2
 
-function! mudox#todo#v_refresh()                                                   " {{{2
+function! mudox#todo#v_refresh()                                                     " {{{2
   let pos = getcurpos()
 
   call s:m_collect()
@@ -607,6 +614,10 @@ endfunction "  }}}2
 
 function! mudox#todo#main()                                                          " {{{1
   " TODO!!!: rethink about the window open way
+  let fname = fnamemodify(bufname('%'), ':p')
+  let lnum  = line('.')
+  let item  = s:m_mkitem(fname, lnum, getline('.'))
+
   try
     call s:v_open_win()
   catch /^Qpen: Canceled$/
@@ -616,12 +627,27 @@ function! mudox#todo#main()                                                     
     return
   endtry
 
+  let s:v.fold[fname] = 1
   call mudox#todo#v_refresh()
+
+  " if on a valid item source line, jump to the corresponding item line in the
+  " todo window
+  " else if the file has a source item line, jump to the file section in the
+  " toto window
+  " else stay put
+  if ! empty(item)
+    call s:v_goto_iline(item)
+  else
+    let idx = match(s:m_items, string({'fname': fname}))
+    call s:v_goto_iline(s:m_items[idx])
+  endif
 endfunction "  }}}1
 
-" LOGGING & DEBUG                                                                    {{{1
-function! s:dbg_log(...)                                                           " {{{2
+" LOGGING & DEBUG                                                                      {{{1
+function! s:dbg_log(title, ...)                                                      " {{{2
   redir! > /tmp/vim-todo.log
+  echo 'Debug Logging: ' . a:title
+  echo
 
   echo 's:m_items ----'
   for i in s:m_items
