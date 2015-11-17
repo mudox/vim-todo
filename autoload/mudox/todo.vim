@@ -227,6 +227,16 @@ let s:v_fline_prefix = printf(' \(%s\|%s\)', s:symbol.folded, s:symbol.unfolded)
 let mudox#todo#v_fline_prefix = s:v_fline_prefix
 let s:v_iline_prefix = repeat("\x20", 6)
 
+function! s:v_goto_fline(fname)                                                      " {{{2
+  " TODO!!!: implement s:v_goto_item(item)
+
+endfunction " }}}2
+
+function! s:v_goto_iline(item)                                                       " {{{2
+  " TODO!!!: implement s:v_goto_item(item)
+
+endfunction " }}}2
+
 function! s:v_show()                                                                 " {{{2
 
   " only draw when model & view status changed
@@ -497,8 +507,23 @@ endfunction "  }}}2
 
 " mapping implementations ------------------------------
 
-function! mudox#todo#v_toggle_folding()                                              " {{{2
-  let unfold = ! search('^' . s:v_iline_prefix, 'wcn')
+function! mudox#todo#v_toggle_folding(...)                                              " {{{2
+  if a:0 == 1
+    if a:1 == 'folded'
+      let unfold = 0
+    elseif a:1 == 'unfolded'
+      let unfold = 1
+    else
+      echoerr printf('invalid argument [%s], need "folded" or "unfolded"',
+            \ a:1)
+    endif
+  elseif a:0 == 0
+    let unfold = ! search('^' . s:v_iline_prefix, 'wcn')
+  else
+    echoerr printf(
+          \ "%d arguments received, need 0 or 1 ('folded' or 'unfolded')",
+          \ a:0)
+  endif
 
   for item in s:m_items
     let s:v.fold[item.fname] = unfold
