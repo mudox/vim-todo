@@ -1,7 +1,7 @@
 scriptencoding utf8
 
-" TODO: remove symlink
 call clearmatches()
+" TODO: magic color number here
 highlight todoHigh guifg=#ffffff
 
 " highlight group: todoNormal, todoLow, todoMedium, todoHigh

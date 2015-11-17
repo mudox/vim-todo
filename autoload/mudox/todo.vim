@@ -16,7 +16,6 @@ let s:symbol = {
       \ 'unfolded'  : '',
       \ 'lnum'      : ' ',
       \ 'fline_cnt' : ' ',
-      \ 'tline_cnt' : ' ',
       \ 'p!!!'      : '',
       \ 'p!!'       : ' ',
       \ 'p!'        : '  ',
@@ -103,7 +102,7 @@ function! s:m_collect_buf(bufnr)                                                
       let [item.title, item.priority, item.text] = matchlist(line, s:m_pattern)[1:3]
       let item.priority = 'p' . item.priority
 
-      call add(s:m_items, item)
+      call s:m_add_item(item)
     endif
   endfor
 endfunction " }}}2
@@ -125,12 +124,33 @@ function! s:m_collect_file(fname)                                               
             \ matchlist(line, s:m_pattern)[1:3]
       let item.priority = 'p' . item.priority
 
-      call add(s:m_items, item)
+      call s:m_add_item(item)
     endif
   endfor
 endfunction " }}}2
 
+function! s:m_add_item(item)                                                         " {{{2
+  " TODO: implement s:m_add_item(item)
+  let w = len(string(a:item.lnum))
+  if s:v.max_lnum_width < w
+    let s:v.max_lnum_width = w
+  endif
+
+  let w = len(a:item.fname)
+
+  if s:v.max_fname_width < w
+    let s:v.max_fname_width = w
+  endif
+
+
+  call add(s:m_items, a:item)
+endfunction " }}}2
+
 function! s:m_collect()                                                              " {{{2
+  " reset stat data
+  let s:v.max_lnum_width  = 0
+  let s:v.max_fname_width = 0
+
   unlockvar s:m_items
   let s:m_items = []
 
@@ -157,6 +177,8 @@ function! s:m_collect()                                                         
   endif
 
   lockvar s:m_items
+
+  let s:v.max_cnt_width = len(string(len(s:m_items)))
 endfunction "  }}}2
 
 function! s:m_fname_set()                                                            " {{{2
@@ -180,7 +202,10 @@ let s:v_old = {}
 let s:v = {}
 
 " fold[fname]: 1 for unfold, 0 for fold
-let s:v.fold = {}
+let s:v.fold            = {}
+let s:v.max_lnum_width  = 0
+let s:v.max_fname_width = 0
+let s:v.max_cnt_width   = 0
 
 " patterns used for line identifying & highlighting
 let s:v_tline_prefix = '   └'
@@ -247,8 +272,7 @@ function! s:v_fline(fname, folded)                                              
   " figure out path width
   let pane_width = max([80, winwidth(winnr())])
   let prefix_width = 4
-  " TODO: remove magic number for count_width
-  let count_width = 6
+  let count_width = len(s:symbol.fline_cnt) + 1 + s:v.max_cnt_width
   if a:folded == 'folded'
     let path_width = pane_width - prefix_width - count_width
   else
@@ -264,7 +288,7 @@ function! s:v_fline(fname, folded)                                              
   " items count text when section folded
   let fline_cnt = len(filter(copy(s:m_items), 'v:val.fname == a:fname'))
   let count_text = (a:folded == 'unfolded') ? ''
-        \ : printf('%s %-3s', s:symbol.fline_cnt, fline_cnt)
+        \ : printf('%s %3s', s:symbol.fline_cnt, fline_cnt)
 
   " node symbol
   let node = (a:folded == 'folded') ? ' ' : '┐'
@@ -279,26 +303,45 @@ function! s:v_fline(fname, folded)                                              
 endfunction "  }}}2
 
 function! s:v_tline(title)                                                           " {{{2
+  " TODO!!: add fancy symbol & item count to tline
   return printf('%s %s:', s:v_tline_prefix, a:title)
+endfunction "  }}}2
+
+function! s:v_is_tline(line)                                                         " {{{2
+  return a:line =~ '^' . s:v_tline_prefix
 endfunction "  }}}2
 
 function! s:v_iline(item)                                                            " {{{2
   " compose item line for display
-  " limit whole line width to 80
-  " IDEA!: wrap long text without truncation
-  let text_width = 58
+  " TODO!!: make iline shrinkable
+  let pane_width = max([80, winwidth(winnr())])
+  let prefix_width = len(s:v_iline_prefix)
+  " TODO: remove magic number for priority symbo width
+  let priority_width = 4
+  let suffix_width = 1 + len(s:symbol.lnum) + 1 + s:v.max_lnum_width
+  let text_width = pane_width - prefix_width - priority_width - suffix_width
+
+  " truncat text content if too long
   if len(a:item.text) > text_width
     let text = a:item.text[:text_width - 3 - 1] . '...'
   else
     let text = a:item.text
   endif
 
-  return printf('%s%s %-' . text_width . 's %s',
+  let fmt = printf(' %%s %%-%dd', s:v.max_lnum_width)
+  let suffix = printf(fmt, s:symbol.lnum, a:item.lnum)
+
+  let fmt = printf('%%s%%s %%-%ds%%s', text_width)
+  return printf(fmt,
         \ s:v_iline_prefix,
         \ s:symbol[a:item.priority],
         \ text,
-        \ printf('%s %s', s:symbol.lnum, a:item.lnum),
+        \ suffix,
         \ )
+endfunction "  }}}2
+
+function! s:v_is_item_line(line)                                                     " {{{2
+  return a:line =~ '^' . s:v_iline_prefix
 endfunction "  }}}2
 
 function! s:v_open_win(...)                                                          " {{{2
@@ -320,14 +363,6 @@ endfunction " }}}2
 
 function! s:v_is_fline(line)                                                         " {{{2
   return a:line =~ '^' . s:v_fline_prefix
-endfunction "  }}}2
-
-function! s:v_is_tline(line)                                                         " {{{2
-  return a:line =~ '^' . s:v_tline_prefix
-endfunction "  }}}2
-
-function! s:v_is_item_line(line)                                                     " {{{2
-  return a:line =~ '^' . s:v_iline_prefix
 endfunction "  }}}2
 
 function! s:v_seek_fline(lnum, which)                                                " {{{2
@@ -557,7 +592,6 @@ endfunction "  }}}2
 
 function! mudox#todo#main()                                                          " {{{1
   " TODO!!!: rethink about the window open way
-  " TODO!!!: rethink about lien width limitation policy
   try
     call s:v_open_win()
   catch /^Qpen: Canceled$/
