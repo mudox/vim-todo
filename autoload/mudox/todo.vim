@@ -228,7 +228,7 @@ let mudox#todo#v_fline_prefix = s:v_fline_prefix
 let s:v_iline_prefix = repeat("\x20", 6)
 
 function! s:v_goto_fline(fname)                                                      " {{{2
-  " TODO!!!: implement s:v_goto_item(item)
+  " TODO!!!: implement s:v_goto_fline(fname)
 
 endfunction " }}}2
 
@@ -385,16 +385,16 @@ function! s:v_opened_win(fname)                                                 
 endfunction " }}}2
 
 function! s:v_open_win(...)                                                          " {{{2
-  let bufname = '\|TODO\ LIST\|'
+  let bufname = '|TODO LIST|'
 
   " if *TODO* window is open in some tabpage, jump to it
   if s:v_opened_win(bufname)
-    execute 'drop ' . bufname
+    execute 'drop ' . fnameescape(bufname)
     return
   endif
 
   " else query & open in a new window
-  call Qpen(bufname)
+  call Qpen(fnameescape(bufname))
   let s:v_bufnr = bufnr('%')
   set filetype=mdxtodo
 endfunction " }}}2
