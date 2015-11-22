@@ -1,9 +1,9 @@
 setlocal buftype=nofile
 setlocal nobuflisted
+setlocal nonumber
+setlocal norelativenumber
 
 " mappings
-" INFO: temporally delay inline modificatin function
-
 nnoremap <silent><buffer> <C-n> :<C-U>call mudox#todo#v_nav_sec('next', 1)<Cr>
 nnoremap <silent><buffer> <C-p> :<C-U>call mudox#todo#v_nav_sec('prev', 1)<Cr>
 nnoremap <silent><buffer> zx    :<C-U>call mudox#todo#v_nav_sec('cur', 1)<Cr>
