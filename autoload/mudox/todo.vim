@@ -557,14 +557,24 @@ function! mudox#todo#v_toggle_folding(...)                                      
 endfunction " }}}2
 
 function! mudox#todo#v_change_priority(delta)                                        " {{{2
+  " a:delta accepts 2 valus: +1 or -1
+
   " TODO!!: check before changing priority
   " check the existance of source line, if not prompt user to refresh first
   " also change if it can be modified
-  let col = col('.')
 
   " figure out the new priority: new_priority
   let item = s:v_lnum2item(line('.'))
   if empty(item)
+    return
+  endif
+
+  let src_line = getbufline(item.fname, item.lnum)[0]
+  let src_item = s:m_mkitem(item.fname, item.lnum, src_line)
+  if src_item != item
+    echohl WarningMsg
+    echo 'source file has been change, press "r" to refresh the content first'
+    echohl None
     return
   endif
 
@@ -573,34 +583,23 @@ function! mudox#todo#v_change_priority(delta)                                   
   elseif a:delta == -1 && len(item.priority) > 1
     let item.priority = item.priority[:-2]
   else
-    return
+    echoerr printf('invalid argument (%s), need +1 or -1', a:delta)
   endif
 
-  " TODO!!: need to add data view synchronization way
-
-  " re-sort the items & re-show
-  call s:v_show()
-
-  " cursor follow the changed line
-  let line_pat = s:v_iline(item)
-  call cursor(0, 1)
-  let lnum = search(line_pat, 'Wc' . a:delta == 1 ? 'b' : '')
-  execute printf('normal! %dzz', lnum)
-
   " apply the change back
-  execute 'edit ' . item.fname
+  execute printf('buffer! %s', bufnr(item.fname))
   let line = getline(item.lnum)
   let line = substitute(line, item.title . '\zs.\{-}\ze:',
         \ item.priority[1:], '')
   call setline(item.lnum, line)
   update
-
   execute printf('buffer! %s', s:v_bufnr)
 
-  let startofline = &startofline
-  set nostartofline
-  call cursor(lnum, col)
-  let &startofline = startofline
+  " re-sort the items & re-show
+  call s:v_show()
+
+  " cursor follow the changed line
+  call s:v_goto_iline(item)
 endfunction "  }}}2
 
 function! mudox#todo#v_nav_sec(which, ...)                                           " {{{2
@@ -717,7 +716,18 @@ function! s:dbg_log(title, ...)                                                 
   endfor
 
   echo "\ns:v ----"
-  echo s:v
+  echo 'flines'
+  for [k, v] in items(s:v.flines)
+    echo printf('%s -> %d', k, v)
+  endfor
+  echo 'tlines'
+  for [k, v] in items(s:v.tlines)
+    echo printf('%s -> %d', k, v)
+  endfor
+  echo 'ilines'
+  for [k, v] in items(s:v.ilines)
+    echo printf('%s -> %d', k, v)
+  endfor
 
   echo "\na:000 ----"
   echo a:000
@@ -725,3 +735,5 @@ function! s:dbg_log(title, ...)                                                 
   redir END
 endfunction " }}}2
 " }}}1
+
+" TODO!: autocmd to refresh after entering todo window
