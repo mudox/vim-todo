@@ -436,7 +436,8 @@ function! s:v_seek_fline(lnum, which)                                           
   "   0 if not found
   " keep the cursor within the function body
 
-  let pos = getcurpos()
+  let l = line('.')
+  let c = col('.')
 
   let flags = {
         \ 'next' : 'W',
@@ -462,11 +463,7 @@ function! s:v_seek_fline(lnum, which)                                           
           \ )
   endif
 
-  let startofline = &startofline
-  set nostartofline
-  call setpos('.', pos)
-  let &startofline = startofline
-
+  call s:v_stay(l, c)
   return lnum
 endfunction " }}}2
 
@@ -531,7 +528,7 @@ endfunction "  }}}2
 
 " mapping implementations ------------------------------
 
-function! mudox#todo#v_toggle_folding(...)                                              " {{{2
+function! mudox#todo#v_toggle_folding(...)                                           " {{{2
   if a:0 == 1
     if a:1 == 'folded'
       let unfold = 0
@@ -620,8 +617,7 @@ function! mudox#todo#v_nav_sec(which, ...)                                      
   endif
 endfunction " }}}2
 
-function! s:v_stay(line, column) " {{{2
-  " TODO!!!: use this function to replace old startofline lines
+function! s:v_stay(line, column)                                                     " {{{2
   let startofline = &startofline
   set nostartofline
   call cursor(a:line, a:column)
@@ -640,7 +636,6 @@ function! mudox#todo#v_goto_source()                                            
 endfunction "  }}}2
 
 function! mudox#todo#v_toggle_section_fold()                                         " {{{2
-  " ISSUE!!!: cursor jump to wrong place
   let col_num = col('.')
 
   let flnum = (s:v_seek_fline('.', 'cur'))
@@ -658,21 +653,19 @@ function! mudox#todo#v_toggle_section_fold()                                    
 endfunction " }}}2
 
 function! mudox#todo#v_refresh()                                                     " {{{2
-  let pos = getcurpos()
+  let lnum = line('.')
+  let col_num = col('.')
 
   call s:m_collect()
   call s:v_show()
 
-  let startofline = &startofline
-  set nostartofline
-  call setpos('.', pos)
-  let &startofline = startofline
+  call s:v_stay(lnum, col_num)
 endfunction "  }}}2
 
 " }}}1
 
 function! mudox#todo#main()                                                          " {{{1
-  " TODO!!!: rethink about the window open way
+  " TODO!: rethink about the window open way
   let fname = fnamemodify(bufname('%'), ':p')
   let lnum  = line('.')
   let item  = s:m_mkitem(fname, lnum, getline('.'))
