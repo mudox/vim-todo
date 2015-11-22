@@ -144,7 +144,6 @@ function! s:m_collect_file(fname)                                               
 endfunction " }}}2
 
 function! s:m_add_item(item)                                                         " {{{2
-  " TODO: implement s:m_add_item(item)
   let w = len(string(a:item.lnum))
   if s:v.max_lnum_width < w
     let s:v.max_lnum_width = w
@@ -155,7 +154,6 @@ function! s:m_add_item(item)                                                    
   if s:v.max_fname_width < w
     let s:v.max_fname_width = w
   endif
-
 
   call add(s:m_items, a:item)
 endfunction " }}}2
@@ -217,6 +215,9 @@ let s:v = {}
 
 " fold[fname]: 1 for unfold, 0 for fold
 let s:v.fold            = {}
+let s:v.flines          = {}
+let s:v.tlines          = {}
+let s:v.ilines          = {}
 let s:v.max_lnum_width  = 0
 let s:v.max_fname_width = 0
 let s:v.max_cnt_width   = 0
@@ -228,35 +229,53 @@ let mudox#todo#v_fline_prefix = s:v_fline_prefix
 let s:v_iline_prefix = repeat("\x20", 6)
 
 function! s:v_goto_fline(fname)                                                      " {{{2
-  " TODO!!!: implement s:v_goto_fline(fname)
+  if ! has_key(s:v.ilines, a:fname)
+    throw printf('invalid file name: %s', fname)
+  endif
 
+  let col_num = col('.')
+  let lnum = s:v.flines[a:fname]
+
+  call s:v_stay(lnum, col_num)
 endfunction " }}}2
 
 function! s:v_goto_iline(item)                                                       " {{{2
-  " TODO!!!: implement s:v_goto_item(item)
+  if ! has_key(s:v.ilines, string(a:item))
+    throw printf('invalid item: %s', string(a:item))
+  endif
 
+  let col_num = col('.')
+  let lnum = s:v.ilines[string(a:item)]
+
+  call s:v_stay(lnum, col_num)
 endfunction " }}}2
 
 function! s:v_show()                                                                 " {{{2
+  let s:v.pane_width = winwidth(winnr())
 
   " only draw when model & view status changed
   if s:v_old == s:v
         \ && s:m_items_old == s:m_items
-        \ && s:v_old_pane_width == winwidth(winnr())
     return
   endif
 
+  " backup old view status
   let s:v_old = deepcopy(s:v)
   let s:m_items_old = deepcopy(s:m_items)
-  let s:v_old_pane_width = winwidth(winnr())
+
+  let s:v.flines = {}
+  let s:v.tlines = {}
+  let s:v.ilines = {}
 
   let fname = ''
   let title = ''
   let lines = []
+  let lnum  = 0
+
   for item in s:m_items
-    " print file line if entering a new file section
     let unfolded = get(s:v.fold, item.fname, 0)
 
+    " fline
     if item.fname != fname
       let fname = item.fname
       let title = '' " must print whatever title next line if unfolded
@@ -268,6 +287,8 @@ function! s:v_show()                                                            
             \ '',
             \ fileline,
             \ ])
+      let lnum += 2
+      let s:v.flines[fname] = lnum
     endif
 
     if !unfolded
@@ -279,9 +300,13 @@ function! s:v_show()                                                            
     if item.title != title
       let title = item.title
       call add(lines, s:v_tline(title))
+      let lnum += 1
+      let s:v.tlines[printf('%s@%s', fname, title)] = lnum
     endif
-    call add(lines, s:v_iline(item))
 
+    call add(lines, s:v_iline(item))
+    let lnum += 1
+    let s:v.ilines[string(item)] = lnum
   endfor
 
   setlocal modifiable
@@ -327,7 +352,6 @@ function! s:v_fline(fname, folded)                                              
 endfunction "  }}}2
 
 function! s:v_tline(title)                                                           " {{{2
-  " TODO!!: add fancy symbol & item count to tline
   return printf('%s %s:', s:v_tline_prefix, a:title)
 endfunction "  }}}2
 
@@ -342,7 +366,7 @@ function! s:v_iline(item)                                                       
   " TODO: remove magic number for priority symbo width
   let priority_width = 4
   let suffix_width = 1 + len(s:symbol.lnum) + 1 + s:v.max_lnum_width
-  let text_width = pane_width - prefix_width - priority_width - suffix_width
+  let text_width = pane_width - prefix_width - priority_width - suffix_width - 2
 
   " truncat text content if too long
   if len(a:item.text) > text_width
@@ -597,6 +621,14 @@ function! mudox#todo#v_nav_sec(which, ...)                                      
   endif
 endfunction " }}}2
 
+function! s:v_stay(line, column) " {{{2
+  " TODO!!!: use this function to replace old startofline lines
+  let startofline = &startofline
+  set nostartofline
+  call cursor(a:line, a:column)
+  let &startofline = startofline
+endfunction " }}}2
+
 function! mudox#todo#v_goto_source()                                                 " {{{2
   let item = s:v_lnum2item('.')
   if empty(item)
@@ -609,18 +641,21 @@ function! mudox#todo#v_goto_source()                                            
 endfunction "  }}}2
 
 function! mudox#todo#v_toggle_section_fold()                                         " {{{2
-  let lnum = (s:v_seek_fline('.', 'cur'))
-  if lnum == 0
+  " ISSUE!!!: cursor jump to wrong place
+  let col_num = col('.')
+
+  let flnum = (s:v_seek_fline('.', 'cur'))
+  if flnum == 0
     return
   endif
 
-  let fline = getline(lnum)
-  let fname = s:v_lnum2fname(lnum)
+  let fline = getline(flnum)
+  let fname = s:v_lnum2fname(flnum)
   let unfolded = ! (fline =~ s:symbol.unfolded)
   let s:v.fold[fname] = unfolded
   call mudox#todo#v_refresh()
 
-  call search(fname, 'w')
+  call s:v_stay(s:v.flines[fname], col_num)
 endfunction " }}}2
 
 function! mudox#todo#v_refresh()                                                     " {{{2
@@ -660,10 +695,12 @@ function! mudox#todo#main()                                                     
   " else if the file has a source item line, jump to the file section in the
   " toto window
   " else stay put
+
   if ! empty(item)
     call s:v_goto_iline(item)
   else
-    let idx = match(s:m_items, string({'fname': fname}))
+    let idx = match(s:m_items, string({'fname': fname})[1:-2])
+    "silent call s:dbg_log('test', idx, s:m_items[idx])
     call s:v_goto_iline(s:m_items[idx])
   endif
 endfunction "  }}}1
