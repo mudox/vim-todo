@@ -138,7 +138,7 @@ function! s:m_collect_file(fname) abort                                         
   for idx in range(len(lines))
     let line = lines[idx]
     let lnum = idx + 1
-    let item = s:m_mkitem(a:fname, lnum, line)
+    let item = s:m_mkitem(fnamemodify(a:fname, ':p'), lnum, line)
     if !empty(item)
       call s:m_add_item(item)
     endif
@@ -432,7 +432,7 @@ function! s:v_is_fline(line) abort                                              
   return a:line =~ '^' . s:v_fline_prefix
 endfunction "  }}}2
 
-function! s:v_seek_fline(lnum, which) abort                                    " {{{2
+function! s:v_seek_fline(lnum, which) abort                                       " {{{2
   " a:lnum is a integer
   " a:which accepts one of 'next', 'cur', 'prev'
   " return:
