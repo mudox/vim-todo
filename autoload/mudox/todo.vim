@@ -8,7 +8,7 @@ let s:loaded = 1
 
 scriptencoding utf8
 
-" TODO: cursor positioning need to be unified
+" ISSUE!!!: pool collecting porformance using VimL
 " TODO!!!: make all function symbol independent
 " IDEA!!!: add each mapping's doc text within its' corresponding function.
 " TODO!!!: need a fallback suite of symbols
@@ -234,14 +234,13 @@ let g:mudox#todo#v_fline_prefix = s:v_fline_prefix
 let s:v_iline_prefix = repeat("\x20", 6)
 
 function! s:v_goto_fline(fname) abort                                             " {{{2
-  if ! has_key(s:v.ilines, a:fname)
+  if ! has_key(s:v.flines, a:fname)
     throw printf('invalid file name: %s', a:fname)
   endif
 
-  let col_num = col('.')
   let lnum = s:v.flines[a:fname]
 
-  call s:v_stay(lnum, col_num)
+  call s:v_stay(lnum, stridx(getline(lnum), '/') + 1)
 endfunction " }}}2
 
 function! s:v_goto_iline(item) abort                                              " {{{2
@@ -475,7 +474,6 @@ function! s:v_seek_fline(lnum, which) abort                                     
     endif
   endif
 endfunction " }}}2
-let g:Test = function('s:v_seek_fline')
 
 function! s:v_lnum2fname(lnum) abort                                              " {{{2
   " a:lnum must be valid fline line number
