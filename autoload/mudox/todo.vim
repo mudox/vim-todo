@@ -538,7 +538,9 @@ function! mudox#todo#v_toggle_folding(...) abort                                
     let s:v.fold[item.fname] = unfold
   endfor
 
-  call mudox#todo#v_refresh()
+  let fname = s:v_lnum2fname(s:v_seek_fline(line('.'), 'cur'))
+  call s:v_show()
+  call s:v_goto_fline(fname)
 endfunction " }}}2
 
 function! mudox#todo#v_change_priority(delta) abort                               " {{{2
@@ -579,7 +581,6 @@ function! mudox#todo#v_change_priority(delta) abort                             
   update
   execute printf('buffer! %s', s:v_bufnr)
 
-  " re-sort the items & re-show
   call s:v_show()
 
   " cursor follow the changed line
@@ -632,10 +633,9 @@ function! mudox#todo#v_toggle_section_fold() abort                              
   let fname = s:v_lnum2fname(flnum)
   let unfolded = ! (fline =~ s:symbol.unfolded)
   let s:v.fold[fname] = unfolded
-  call mudox#todo#v_refresh()
+  call s:v_show()
 
-  call s:v_stay(s:v.flines[fname], 1)
-  call search('/')
+  call s:v_goto_fline(fname)
 endfunction " }}}2
 
 function! mudox#todo#v_refresh() abort                                            " {{{2
