@@ -478,27 +478,15 @@ endfunction " }}}2
 let g:Test = function('s:v_seek_fline')
 
 function! s:v_lnum2fname(lnum) abort                                              " {{{2
-  " a:lnum must be line number of a valid file line
-  " this function is suppose to be used in conjunction with s:v_seek_fline()
-  " to get the un-truncated absolute file path stored in s:m_items
-  if !s:v_is_fline(getline(a:lnum))
-    echoerr printf('%d is not a valid file line line number', a:lnum)
-  endif
+  " a:lnum must be valid fline line number
 
-  let fnames = uniq(map(copy(s:m_items), 'v:val.fname'))
-
-  let i = 0
-  let ln = s:v_seek_fline(1, 'next')
-  while ln != a:lnum
-    let i += 1
-    if i > len(fnames) - 1
-      throw 'over loop'
+  for [f, l] in items(s:v.flines)
+    if l == a:lnum
+      return f
     endif
+  endfor
 
-    let ln = s:v_seek_fline(ln, 'next')
-  endwhile
-
-  return fnames[i]
+  echoerr printf('a:lnum (%d) is not a valid file line line number', a:lnum)
 endfunction " }}}2
 
 function! s:v_lnum2item(lnum) abort                                               " {{{2
