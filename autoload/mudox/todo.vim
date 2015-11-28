@@ -428,10 +428,6 @@ function! s:v_open_win(...) abort                                               
   set filetype=mdxtodo
 endfunction " }}}2
 
-function! s:v_is_fline(line) abort                                                " {{{2
-  return a:line =~ '^' . s:v_fline_prefix
-endfunction "  }}}2
-
 function! s:v_seek_fline(lnum, which) abort                                       " {{{2
   " a:lnum is a integer
   " a:which accepts one of 'next', 'cur', 'prev'
@@ -480,14 +476,6 @@ function! s:v_seek_fline(lnum, which) abort                                     
   endif
 endfunction " }}}2
 let g:Test = function('s:v_seek_fline')
-
-function! s:v_line2fname(line) abort                                              " {{{2
-  if ! s:v_is_fline(a:line)
-    echoerr printf('invalid fname line: %s', a:line)
-  endif
-
-  return substitute(a:line, s:v_fline_prefix . ' .', '', '')
-endfunction " }}}2
 
 function! s:v_lnum2fname(lnum) abort                                              " {{{2
   " a:lnum must be line number of a valid file line
