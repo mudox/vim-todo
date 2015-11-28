@@ -1,13 +1,12 @@
-#/usr/bin/env bash
-
+# recreat 'test-todo' tmux window
 tmux kill-window -t :=test-todo &>/dev/null
 tmux new-window -da -c ~/Git/vim-config/plugged/todo -n test-todo bash
-tmux send-keys -t :=test-todo                                       \
-  'shopt -s globstar'                                               \
+# enable bash '**' globbing
+tmux send-keys -t :=test-todo                                                         \
+  'shopt -s globstar'                                                                 \
   c-m
-tmux send-keys -t :=test-todo                                       \
-  "MDX_CHAMELEON_MODE=test-todo nvim **/*.vim ../gitboard/**/*.vim" \
+# launch nvim & start Vader
+tmux send-keys -t :=test-todo                                                         \
+  "MDX_CHAMELEON_MODE=test-todo nvim **/*.vim ../gitboard/**/*.vim -c 'Vader test/*'" \
   c-m
-sleep 0.1
-tmux send-keys -t :=test-todo ':ToDo' c-m t
 tmux select-window -t :=test-todo

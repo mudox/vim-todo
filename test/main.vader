@@ -1,0 +1,4 @@
+Execute (open ToDo window):
+  call feedkeys('t')
+  ToDo
+  AssertEqual '|TODO LIST|', bufname('%'), 'check bufname'
