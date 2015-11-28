@@ -173,7 +173,7 @@ function! s:m_collect() abort                                                   
 
   " INFO: currently only watching listed buffers whose buftype is normal
   for bufnr in range(1, bufnr('$'))
-    if bufexists(bufnr) && buflisted(bufnr) && getbufvar(bufnr, '&buftype') ==# ''
+    if buflisted(bufnr) && getbufvar(bufnr, '&buftype') ==# ''
       if bufloaded(bufnr)
         call s:m_collect_buf(bufnr)
       else
