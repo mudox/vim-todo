@@ -11,6 +11,3 @@ tmux send-keys -t :=test-todo                                       \
 sleep 0.1
 tmux send-keys -t :=test-todo ':ToDo' c-m t
 tmux select-window -t :=test-todo
-tmux send-keys -t :=test-todo                                       \
-  "se nu nowrap"                                                    \
-  c-m
