@@ -429,7 +429,7 @@ function! s:v_open_win(...) abort                                               
 endfunction " }}}2
 
 function! s:v_seek_fline(lnum, which) abort                                       " {{{2
-  " a:lnum is a integer
+  " a:lnum must be a valid line number
   " a:which accepts one of 'next', 'cur', 'prev'
   " return:
   "   line number if a valid fline is found
@@ -625,8 +625,6 @@ function! mudox#todo#v_goto_source() abort                                      
 endfunction "  }}}2
 
 function! mudox#todo#v_toggle_section_fold() abort                                " {{{2
-  let col_num = col('.')
-
   let flnum = (s:v_seek_fline(line('.'), 'cur'))
   if flnum == 0
     return
@@ -638,7 +636,8 @@ function! mudox#todo#v_toggle_section_fold() abort                              
   let s:v.fold[fname] = unfolded
   call mudox#todo#v_refresh()
 
-  call s:v_stay(s:v.flines[fname], col_num)
+  call s:v_stay(s:v.flines[fname], 1)
+  call search('/')
 endfunction " }}}2
 
 function! mudox#todo#v_refresh() abort                                            " {{{2
