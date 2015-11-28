@@ -658,6 +658,13 @@ function! mudox#todo#main() abort                                               
   let lnum  = line('.')
   let item  = s:m_mkitem(fname, lnum, getline('.'))
 
+  let s:v.fold[fname] = 1
+
+  call s:m_collect()
+  if empty(s:m_items)
+    return
+  endif
+
   try
     call s:v_open_win()
   catch /^Qpen: Canceled$/
@@ -667,12 +674,6 @@ function! mudox#todo#main() abort                                               
     return
   endtry
 
-  let s:v.fold[fname] = 1
-
-  call s:m_collect()
-  if empty(s:m_items)
-    return
-  endif
   call s:v_show()
 
   " if on a valid item source line, jump to the corresponding item line in the
