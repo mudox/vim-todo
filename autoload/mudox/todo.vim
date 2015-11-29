@@ -538,9 +538,14 @@ function! mudox#todo#v_toggle_folding(...) abort                                
     let s:v.fold[item.fname] = unfold
   endfor
 
-  let fname = s:v_lnum2fname(s:v_seek_fline(line('.'), 'cur'))
+  let lnum = s:v_seek_fline(line('.'), 'cur')
+  if lnum != 0
+    let fname = s:v_lnum2fname(lnum)
+  endif
   call s:v_show()
-  call s:v_goto_fline(fname)
+  if lnum != 0
+    call s:v_goto_fline(fname)
+  endif
 endfunction " }}}2
 
 function! mudox#todo#v_change_priority(delta) abort                               " {{{2
