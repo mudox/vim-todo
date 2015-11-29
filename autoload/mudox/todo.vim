@@ -8,7 +8,7 @@ let s:loaded = 1
 
 scriptencoding utf8
 
-" ISSUE!!!: pool collecting porformance using VimL
+" ISSUE!!!: pool collecting performance using VimL
 " TODO!!!: make all function symbol independent
 " IDEA!!!: add each mapping's doc text within its' corresponding function.
 " TODO!!!: need a fallback suite of symbols
@@ -215,14 +215,19 @@ let s:v_bufnr = 0
 let s:v_old = {}
 let s:v = {}
 
+" will be set in s:v_open_win()
+let s:v.bufnr           = -1
+
 " fold[fname]: 1 for unfold, 0 for fold
 let s:v.fold            = {}
+
 " { fname : lnum }
 let s:v.flines          = {}
 " { printf('%s@%s', fname, title) : lnum }
 let s:v.tlines          = {}
 " { string(item) : lnum }
 let s:v.ilines          = {}
+
 let s:v.max_lnum_width  = 0
 let s:v.max_fname_width = 0
 let s:v.max_cnt_width   = 0
@@ -415,15 +420,16 @@ function! s:v_open_win(...) abort                                               
   let bufname = '|TODO LIST|'
 
   " if *TODO* window is open in some tabpage, jump to it
-  if s:v_opened_win(bufname)
+  " when no window is showing TODO buffer, it is unloaded
+  if bufloaded(s:v.bufnr)
     execute 'drop ' . fnameescape(bufname)
     return
   endif
 
   " else query & open in a new window
   call g:Qpen(fnameescape(bufname))
-  let s:v_bufnr = bufnr('%')
-  set filetype=mdxtodo
+  let s:v.bufnr = bufnr('%')
+  setlocal filetype=mdxtodo
 endfunction " }}}2
 
 function! s:v_seek_fline(lnum, which) abort                                       " {{{2
