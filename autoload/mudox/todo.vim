@@ -227,6 +227,8 @@ let s:v.max_lnum_width  = 0
 let s:v.max_fname_width = 0
 let s:v.max_cnt_width   = 0
 
+let s:v.opened_fnames = []
+
 " patterns used for line identifying & highlighting
 let s:v_tline_prefix = '   └'
 let s:v_fline_prefix = printf(' \(%s\|%s\)', s:symbol.folded, s:symbol.unfolded)
@@ -270,6 +272,7 @@ function! s:v_show() abort                                                      
   let s:v.flines = {}
   let s:v.tlines = {}
   let s:v.ilines = {}
+  let s:v.opened_fnames = []
 
   let fname = ''
   let title = ''
@@ -282,6 +285,7 @@ function! s:v_show() abort                                                      
     " fline
     if item.fname != fname
       let fname = item.fname
+      let opened = s:v_open_win(fname)
       let title = '' " must print whatever title next line if unfolded
       let fileline = s:v_fline(fname,
             \ unfolded ? 'unfolded' : 'folded')
@@ -308,7 +312,7 @@ function! s:v_show() abort                                                      
       let s:v.tlines[printf('%s@%s', fname, title)] = lnum
     endif
 
-    call add(lines, s:v_iline(item))
+    call add(lines, s:v_iline(item, opened))
     let lnum += 1
     let s:v.ilines[string(item)] = lnum
   endfor
@@ -332,8 +336,8 @@ function! s:v_fline(fname, folded) abort                                        
     let path_width = pane_width - prefix_width
   endif
 
-  if len(a:fname) > path_width
-    let path_text = a:fname[ : path_width - 3 - 1] . '...'
+  if strdisplaywidth(a:fname) > path_width
+    let path_text = '...' . a:fname[strdisplaywidth(a:fname) - (pane_width - 3 - 1) : ]
   else
     let path_text = a:fname
   endif
@@ -363,7 +367,7 @@ function! s:v_is_tline(line) abort                                              
   return a:line =~ '^' . s:v_tline_prefix
 endfunction "  }}}2
 
-function! s:v_iline(item) abort                                                   " {{{2
+function! s:v_iline(item, opened) abort                                                   " {{{2
   " compose item line for display
   let pane_width = max([80, winwidth(winnr())])
   let prefix_width = len(s:v_iline_prefix)
@@ -373,15 +377,14 @@ function! s:v_iline(item) abort                                                 
   let text_width = pane_width - prefix_width - priority_width - suffix_width - 3
 
   " truncat text content if too long
-  if len(a:item.text) > text_width
+  if strdisplaywidth(a:item.text) > text_width
     let text = a:item.text[ : text_width - 3 - 1] . '...'
   else
     let text = a:item.text
   endif
 
   let fmt = printf(' %%s %%-%dd', s:v.max_lnum_width)
-  let suffix_symbol = s:v_opened_win(a:item.fname)
-        \ ? s:symbol.lnum_active : s:symbol.lnum_inactive
+  let suffix_symbol = a:opened ? s:symbol.lnum_active : s:symbol.lnum_inactive
   let suffix = printf(fmt, suffix_symbol, a:item.lnum)
 
   let fmt = printf('%%s%%s %%-%ds%%s', text_width)
@@ -398,18 +401,14 @@ function! s:v_is_item_line(line) abort                                          
 endfunction "  }}}2
 
 function! s:v_opened_win(fname) abort                                             " {{{2
-  let bufnr = bufnr(a:fname)
-  if bufnr == -1
-    return 0
+  if empty(s:v.opened_fnames)
+    for i in range(tabpagenr('$'))
+      call add(s:v.opened_fnames,
+            \ map(tabpagebuflist(i + 1), 'bufname(v:val)'))
+    endfor
   endif
 
-  for i in range(tabpagenr('$'))
-    if index(tabpagebuflist(i + 1), bufnr) != -1
-      return 1
-    endif
-  endfor
-
-  return 0
+  return index(s:v.opened_fnames, a:fname)
 endfunction " }}}2
 
 function! s:v_open_win(...) abort                                                 " {{{2
