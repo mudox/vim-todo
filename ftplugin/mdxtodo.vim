@@ -1,7 +1,9 @@
 setlocal buftype=nofile
+setlocal noswapfile
 setlocal nobuflisted
 setlocal nonumber
 setlocal norelativenumber
+setlocal bufhidden=unload
 
 " mappings
 nnoremap <silent><buffer> <C-n> :<C-U>call mudox#todo#v_nav_sec('next', 1)<Cr>
