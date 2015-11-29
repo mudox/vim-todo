@@ -1,4 +1,17 @@
-Execute (open ToDo window):
+Execute (test for small sized project):
+  argadd ~/Git/vim-config/plugged/{todo,gitboard}/**/*.vim
+  Log printf('%d files added', argc())
+  Assert argc() != 0
+
+  call feedkeys('t')
+  ToDo
+  AssertEqual '|TODO LIST|', bufname('%'), 'check bufname'
+
+Execute (test for big sized project):
+  argadd ~/Git/neovim/**/*.vim
+  Log printf('%d files added', argc())
+  Assert argc() != 0
+
   call feedkeys('t')
   ToDo
   AssertEqual '|TODO LIST|', bufname('%'), 'check bufname'
