@@ -8,10 +8,9 @@ let s:loaded = 1
 
 scriptencoding utf8
 
-" ISSUE!!!: pool collecting performance using VimL
 " TODO!!!: make all function symbol independent
 " IDEA!!!: add each mapping's doc text within its' corresponding function.
-" TODO!!!: need a fallback suite of symbols
+" TODO!: need a fallback suite of symbols
 " TODO: need to honor user's choice
 let s:symbol = {
       \ 'folded'        : ''    ,
@@ -140,7 +139,7 @@ function! s:m_collect_buf(bufnr) abort                                          
   endfor
 endfunction " }}}2
 
-function! s:m_collect_files_x(fnames) abort                                         " {{{2
+function! s:m_collect_files_x(fnames) abort                                       " {{{2
   let fnames_string = join(map(
         \ filter(a:fnames, 'filereadable(v:val)'), 'shellescape(v:val)'))
 
@@ -161,7 +160,7 @@ function! s:m_collect_files_x(fnames) abort                                     
   endfor
 endfunction " }}}2
 
-function! s:m_collect_files_viml(fnames) abort                                           " {{{2
+function! s:m_collect_files_viml(fnames) abort                                    " {{{2
   for fname in a:fnames
     if !filereadable(fname)
       return
@@ -194,7 +193,7 @@ function! s:m_add_item(item) abort                                              
   call add(s:m_items, a:item)
 endfunction " }}}2
 
-function! s:m_collect() abort                                                  " {{{2
+function! s:m_collect() abort                                                     " {{{2
   " reset stat data
   let s:v.max_lnum_width  = 0
   let s:v.max_fname_width = 0
@@ -332,7 +331,7 @@ function! s:v_show() abort                                                      
     " fline
     if item.fname != fname
       let fname = item.fname
-      let opened = s:v_open_win(fname)
+      let opened = s:v_fname_opened(fname)
       let title = '' " must print whatever title next line if unfolded
       let fileline = s:v_fline(fname,
             \ unfolded ? 'unfolded' : 'folded')
@@ -414,7 +413,7 @@ function! s:v_is_tline(line) abort                                              
   return a:line =~ '^' . s:v_tline_prefix
 endfunction "  }}}2
 
-function! s:v_iline(item, opened) abort                                                   " {{{2
+function! s:v_iline(item, opened) abort                                           " {{{2
   " compose item line for display
   let pane_width = max([80, winwidth(winnr())])
   let prefix_width = len(s:v_iline_prefix)
@@ -447,15 +446,15 @@ function! s:v_is_item_line(line) abort                                          
   return a:line =~ '^' . s:v_iline_prefix
 endfunction "  }}}2
 
-function! s:v_opened_win(fname) abort                                             " {{{2
+function! s:v_fname_opened(fname) abort                                           " {{{2
   if empty(s:v.opened_fnames)
-    for i in range(tabpagenr('$'))
-      call add(s:v.opened_fnames,
-            \ map(tabpagebuflist(i + 1), 'bufname(v:val)'))
+    for i in range(1, tabpagenr('$'))
+      call extend(s:v.opened_fnames,
+            \ map(tabpagebuflist(i), 'fnamemodify(bufname(v:val), ":p")'))
     endfor
   endif
 
-  return index(s:v.opened_fnames, a:fname)
+  return index(s:v.opened_fnames, a:fname) != -1
 endfunction " }}}2
 
 function! s:v_open_win(...) abort                                                 " {{{2
