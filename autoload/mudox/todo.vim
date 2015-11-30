@@ -89,6 +89,11 @@ function! s:m_sort_items() abort                                                
   lockvar s:m_items
 endfunction "  }}}2
 
+function! s:m_mkitem_ag(lines) abort                                              " {{{2
+" TODO: implement s:m_mkitem_ag(lines)
+
+endfunction " }}}2
+
 function! s:m_mkitem(fname, lnum, line) abort                                     " {{{2
   " parse line, if is a valid item line, construct a dict
   " {
@@ -101,19 +106,25 @@ function! s:m_mkitem(fname, lnum, line) abort                                   
   " which can be added to s:m_items
   " otherwise, a empty dict is returned
 
-  if a:line =~ s:m_pattern
-    let item       = {}
-    let item.fname = a:fname
-    let item.lnum  = a:lnum
+  "if a:line =~ s:m_pattern_pre
+  let item       = {}
+  let item.fname = a:fname
+  let item.lnum  = a:lnum
 
+  try
     let [item.title, item.priority, item.text] = matchlist(a:line, s:m_pattern)[1:3]
-    let item.priority = 'p' . item.priority
+  catch
+    return {}
+  endtry
 
+  let item.priority = 'p' . item.priority
+
+  if !empty(item.title) && !empty(item.text)
     return item
   else
     return {}
-  endif
-endfunction " }}}2
+    "endif
+  endfunction " }}}2
 
 function! s:m_collect_buf(bufnr) abort                                            " {{{2
   let lines = getbufline(a:bufnr, 1, '$')
@@ -129,19 +140,42 @@ function! s:m_collect_buf(bufnr) abort                                          
   endfor
 endfunction " }}}2
 
-function! s:m_collect_file(fname) abort                                           " {{{2
-  if !filereadable(a:fname)
-    return
-  endif
+function! s:m_collect_files_x(fnames) abort                                         " {{{2
+  let fnames_string = join(map(
+        \ filter(a:fnames, 'filereadable(v:val)'), 'shellescape(v:val)'))
 
-  let lines = readfile(a:fname)
-  for idx in range(len(lines))
-    let line = lines[idx]
-    let lnum = idx + 1
-    let item = s:m_mkitem(fnamemodify(a:fname, ':p'), lnum, line)
-    if !empty(item)
-      call s:m_add_item(item)
+  let pattern = "'(" . join(s:titles, '|') . ')!{0,3}\s*:' . "'"
+
+  let cmd = printf('ag %s %s', pattern, fnames_string)
+  let ret_lines = systemlist(cmd)
+  for line in ret_lines
+    let a = stridx(line, ':')
+    let b = stridx(line, ':', a + 1)
+    let fname = strpart(line, 0, a)
+    let lnum = strpart(line, a + 1, b - a - 1)
+    let text = strpart(line, b + 1)
+    let item = s:m_mkitem(fname, lnum, text)
+    if ! empty(item)
+      call add(s:m_items, item)
     endif
+  endfor
+endfunction " }}}2
+
+function! s:m_collect_files_viml(fnames) abort                                           " {{{2
+  for fname in a:fnames
+    if !filereadable(fname)
+      return
+    endif
+
+    let lines = readfile(fname)
+    for idx in range(len(lines))
+      let line = lines[idx]
+      let lnum = idx + 1
+      let item = s:m_mkitem(fnamemodify(fname, ':p'), lnum, line)
+      if !empty(item)
+        call s:m_add_item(item)
+      endif
+    endfor
   endfor
 endfunction " }}}2
 
@@ -160,7 +194,7 @@ function! s:m_add_item(item) abort                                              
   call add(s:m_items, a:item)
 endfunction " }}}2
 
-function! s:m_collect() abort                                                     " {{{2
+function! s:m_collect() abort                                                  " {{{2
   " reset stat data
   let s:v.max_lnum_width  = 0
   let s:v.max_fname_width = 0
@@ -172,27 +206,35 @@ function! s:m_collect() abort                                                   
   " IDEA!: arg list can be handled by `ag`, add it in?
 
   " INFO: currently only watching listed buffers whose buftype is normal
+  let fnames = []
   for bufnr in range(1, bufnr('$'))
     if buflisted(bufnr) && getbufvar(bufnr, '&buftype') ==# ''
       if bufloaded(bufnr)
+        " IDEA!: maybe let buffers that &nomodified to be handle by ag too
         call s:m_collect_buf(bufnr)
       else
-        call s:m_collect_file(bufname(bufnr))
+        call add(fnames, bufname(bufnr))
       end
     endif
   endfor
 
-  if len(s:m_items) != 0
+  if ! empty(fnames)
+    if executable('ag')
+      call s:m_collect_files_x(fnames)
+    else
+      call s:m_collect_files_viml(fnames)
+    endif
+  endif
+
+  if ! empty(s:m_items)
     call s:m_sort_items()
+    lockvar s:m_items
+    let s:v.max_cnt_width = len(string(len(s:m_items)))
   else
     echohl WarningMsg
     echo 'TODO LIST: no todo list collect'
     echohl None
   endif
-
-  lockvar s:m_items
-
-  let s:v.max_cnt_width = len(string(len(s:m_items)))
 endfunction "  }}}2
 
 function! s:m_fname_set() abort                                                   " {{{2
