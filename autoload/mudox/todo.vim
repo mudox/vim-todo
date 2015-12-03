@@ -58,7 +58,7 @@ function! s:m_sort_items() abort                                                
   function! s:sort_by_lnum(l, r) abort
     let left = a:l.lnum
     let right = a:r.lnum
-    return left == right ? 0 : left < right ? 1 : -1
+    return left == right ? 0 : left > right ? 1 : -1
   endfunction
 
   function! s:sort_by_priority(l, r) abort
