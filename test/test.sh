@@ -1,3 +1,4 @@
+# TODO!!!: add travis ci integratioon
 # recreat 'test-todo' tmux window
 tmux kill-window -t :=test-todo &>/dev/null
 tmux new-window -da -c ~/Git/vim-config/plugged/todo -n test-todo bash

@@ -32,8 +32,9 @@ highlight link todoFileName       String
 highlight link todoFoldedSymbol   Type
 highlight link todoUnfoldedSymbol Type
 
-call matchadd('todoTitle','└\zs.*$')
-call matchadd('todoLine','└\|┐', 100)
-call matchadd('String', mudox#todo#v_fline_prefix . '.\zs.*$')
-call matchadd('todoFoldedSymbol', mudox#todo#symbol.folded)
-call matchadd('todoUnFoldedSymbol', mudox#todo#symbol.unfolded)
+call matchadd('todoTitle', mudox#todo#v.tline_prefix . '\zs.*$')
+call matchadd('todoLine', mudox#todo#v.tline_prefix)
+call matchadd('todoLine', mudox#todo#v.symbols.fline_tline_prefix)
+call matchadd('String', mudox#todo#v.fline_prefix_pattern . mudox#todo#v.symbols.fline_tline_prefix . '.\zs.*$')
+call matchadd('todoFoldedSymbol', mudox#todo#v.symbols.folded)
+call matchadd('todoUnFoldedSymbol', mudox#todo#v.symbols.unfolded)

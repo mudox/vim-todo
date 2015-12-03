@@ -8,23 +8,11 @@ let s:loaded = 1
 
 scriptencoding utf8
 
+" TODO!: ctrlp integration
+" TODO!!: doc vim-todo.txt
 " TODO!!!: make all function symbol independent
 " IDEA!!!: add each mapping's doc text within its' corresponding function.
-" TODO!: need a fallback suite of symbols
-" TODO: need to honor user's choice
-let s:symbol = {
-      \ 'folded'        : ''    ,
-      \ 'unfolded'      : ''    ,
-      \ 'lnum'          : ' '   ,
-      \ 'lnum_active'   : ' '   ,
-      \ 'lnum_inactive' : ' '   ,
-      \ 'fline_cnt'     : ' '   ,
-      \ 'p!!!'          : ''  ,
-      \ 'p!!'           : ' '  ,
-      \ 'p!'            : '  '  ,
-      \ 'p'             : '   '  ,
-      \ }
-let g:mudox#todo#symbol = s:symbol
+" TODO: use setting interface
 
 let s:titles = [
       \ 'TODO',
@@ -251,10 +239,44 @@ endfunction " }}}2
 
 " THE VIEW                                                                          {{{1
 " the view status object & it's old snapshot
-let s:v_bufnr = 0
-
 let s:v_old = {}
+
 let s:v = {}
+let g:mudox#todo#v = s:v
+
+" TODO!!!: ASCII default symbols
+let s:v.nerd_symbols = {
+      \ 'folded'        : ''    ,
+      \ 'unfolded'      : ''    ,
+      \ 'lnum'          : ' '   ,
+      \ 'lnum_active'   : ' '   ,
+      \ 'lnum_inactive' : ' '   ,
+      \ 'fline_cnt'     : ' '   ,
+      \ 'p!!!'          : ''  ,
+      \ 'p!!'           : ' '  ,
+      \ 'p!'            : '  '  ,
+      \ 'p'             : '   '  ,
+      \ 'tline_prefix'       : '└─'   ,
+      \ 'fline_tline_prefix' : '┐'    ,
+      \ }
+
+" fancy default symbols when nerd-font is available
+let s:v.nerd_symbols = {
+      \ 'folded'             : ''    ,
+      \ 'unfolded'           : ''    ,
+      \ 'lnum'               : ' '   ,
+      \ 'lnum_active'        : ' '   ,
+      \ 'lnum_inactive'      : ' '   ,
+      \ 'fline_cnt'          : ' '   ,
+      \ 'p!!!'               : ''  ,
+      \ 'p!!'                : ' '  ,
+      \ 'p!'                 : '  '  ,
+      \ 'p'                  : '   '  ,
+      \ 'tline_prefix'       : '└─'   ,
+      \ 'fline_tline_prefix' : '┐'    ,
+      \ }
+
+let s:v.symbols = s:v.nerd_symbols
 
 " will be set in s:v_open_win()
 let s:v.bufnr           = -1
@@ -276,10 +298,9 @@ let s:v.max_cnt_width   = 0
 let s:v.opened_fnames = []
 
 " patterns used for line identifying & highlighting
-let s:v_tline_prefix = '   └'
-let s:v_fline_prefix = printf(' \(%s\|%s\)', s:symbol.folded, s:symbol.unfolded)
-let g:mudox#todo#v_fline_prefix = s:v_fline_prefix
-let s:v_iline_prefix = repeat("\x20", 6)
+let s:v.tline_prefix = repeat("\x20", 3) . s:v.symbols.tline_prefix
+let s:v.iline_prefix = repeat("\x20", 6)
+let s:v.fline_prefix_pattern = printf(' \(%s\|%s\)', s:v.symbols.folded, s:v.symbols.unfolded)
 
 function! s:v_goto_fline(fname) abort                                             " {{{2
   if ! has_key(s:v.flines, a:fname)
@@ -375,7 +396,7 @@ function! s:v_fline(fname, folded) abort                                        
   " figure out path width
   let pane_width = max([80, winwidth(winnr())]) - 3
   let prefix_width = 4
-  let count_width = len(s:symbol.fline_cnt) + 1 + s:v.max_cnt_width
+  let count_width = len(s:v.symbols.fline_cnt) + 1 + s:v.max_cnt_width
   if a:folded ==# 'folded'
     let path_width = pane_width - prefix_width - count_width
   else
@@ -391,14 +412,14 @@ function! s:v_fline(fname, folded) abort                                        
   " items count text when section folded
   let fline_cnt = len(filter(copy(s:m_items), 'v:val.fname == a:fname'))
   let count_text = (a:folded ==# 'unfolded') ? ''
-        \ : printf('%s %3s', s:symbol.fline_cnt, fline_cnt)
+        \ : printf('%s %3s', s:v.symbols.fline_cnt, fline_cnt)
 
   " node symbol
   let node = (a:folded ==# 'folded') ? ' ' : '┐'
 
   let fmt = printf(' %%s %%s%%-%ds%%s', path_width)
   return printf(fmt,
-        \ s:symbol[a:folded],
+        \ s:v.symbols[a:folded],
         \ node,
         \ path_text,
         \ count_text,
@@ -406,20 +427,20 @@ function! s:v_fline(fname, folded) abort                                        
 endfunction "  }}}2
 
 function! s:v_tline(title) abort                                                  " {{{2
-  return printf('%s %s:', s:v_tline_prefix, a:title)
+  return printf('%s%s:', s:v.tline_prefix, a:title)
 endfunction "  }}}2
 
 function! s:v_is_tline(line) abort                                                " {{{2
-  return a:line =~ '^' . s:v_tline_prefix
+  return a:line =~ '^' . s:v.tline_prefix
 endfunction "  }}}2
 
 function! s:v_iline(item, opened) abort                                           " {{{2
   " compose item line for display
   let pane_width = max([80, winwidth(winnr())])
-  let prefix_width = len(s:v_iline_prefix)
+  let prefix_width = len(s:v.iline_prefix)
   " TODO: remove magic number for priority symbo width
   let priority_width = 4
-  let suffix_width = 1 + len(s:symbol.lnum) + 1 + s:v.max_lnum_width
+  let suffix_width = 1 + len(s:v.symbols.lnum) + 1 + s:v.max_lnum_width
   let text_width = pane_width - prefix_width - priority_width - suffix_width - 3
 
   " truncat text content if too long
@@ -430,20 +451,21 @@ function! s:v_iline(item, opened) abort                                         
   endif
 
   let fmt = printf(' %%s %%-%dd', s:v.max_lnum_width)
-  let suffix_symbol = a:opened ? s:symbol.lnum_active : s:symbol.lnum_inactive
+  let suffix_symbol = a:opened ? s:v.symbols.lnum_active : s:v.symbols.lnum_inactive
   let suffix = printf(fmt, suffix_symbol, a:item.lnum)
 
+  " TODO!!!: move line number to line head
   let fmt = printf('%%s%%s %%-%ds%%s', text_width)
   return printf(fmt,
-        \ s:v_iline_prefix,
-        \ s:symbol[a:item.priority],
+        \ s:v.iline_prefix,
+        \ s:v.symbols[a:item.priority],
         \ text,
         \ suffix,
         \ )
 endfunction "  }}}2
 
 function! s:v_is_item_line(line) abort                                            " {{{2
-  return a:line =~ '^' . s:v_iline_prefix
+  return a:line =~ '^' . s:v.iline_prefix
 endfunction "  }}}2
 
 function! s:v_fname_opened(fname) abort                                           " {{{2
@@ -573,7 +595,7 @@ function! mudox#todo#v_toggle_folding(...) abort                                
             \ a:1)
     endif
   elseif a:0 == 0
-    let unfold = ! search('^' . s:v_iline_prefix, 'wcn')
+    let unfold = ! search('^' . s:v.iline_prefix, 'wcn')
   else
     echoerr printf(
           \ "%d arguments received, need 0 or 1 ('folded' or 'unfolded')",
@@ -630,7 +652,7 @@ function! mudox#todo#v_change_priority(delta) abort                             
         \ item.priority[1:], '')
   call setline(item.lnum, line)
   update
-  execute printf('buffer! %s', s:v_bufnr)
+  execute printf('buffer! %s', s:v.bufnr)
 
   call s:v_show()
 
@@ -682,7 +704,7 @@ function! mudox#todo#v_toggle_section_fold() abort                              
 
   let fline = getline(flnum)
   let fname = s:v_lnum2fname(flnum)
-  let unfolded = ! (fline =~ s:symbol.unfolded)
+  let unfolded = ! (fline =~ s:v.symbols.unfolded)
   let s:v.fold[fname] = unfolded
   call s:v_show()
 
