@@ -1,8 +1,6 @@
-Execute (test for small sized project):
-  argadd ~/Git/vim-config/plugged/todo/**/*.vim
-  argadd ~/Git/vim-config/plugged/gitboard/**/*.vim
+Execute (test for big sized project):
+  argadd ~/Git/neovim/**/*.vim
   Log printf('%d files added', argc())
-  bnext
   Assert argc() != 0
 
   call feedkeys('t')
