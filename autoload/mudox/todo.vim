@@ -611,29 +611,17 @@ endfunction " }}}2
 
 function! s:v_lnum2item(lnum) abort                                               " {{{2
   " a:lnum is a line number integer
+  " return empty dict if not found
 
-  let line = getline(a:lnum)
-
-  if ! s:v_is_item_line(line)
+  if index(values(s:v.ilines), a:lnum) == -1
     return {}
   endif
 
-  " get line number
-  let ln = matchstr(line, '\d\+\ze\s*$') + 0
-
-  " get file path
-  let fname = s:v_lnum2fname(s:v_seek_fline(a:lnum, 'cur'))
-
-  " look up the item by filename & lnum
-  let items = filter(copy(s:m_items),
-        \ 'v:val.fname == fname && v:val.lnum == ln')
-
-  if len(items) != 1
-    echoerr printf('%d matching items filtered, must be 1', len(items))
-    call s:dbg_log(items)
-  endif
-
-  return items[0]
+  for [item_string, lnum] in items(s:v.ilines)
+    if lnum == a:lnum
+      return eval(item_string)
+    endif
+  endfor
 endfunction "  }}}2
 
 " mapping implementations ------------------------------
