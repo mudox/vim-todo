@@ -219,7 +219,7 @@ function! s:m_collect() abort                                                   
     let s:v.max_cnt_width = len(string(len(s:m_items)))
   else
     echohl WarningMsg
-    echo 'TODO LIST: no todo list collect'
+    echo 'TODO LIST: no todo item is collected'
     echohl None
   endif
 endfunction "  }}}2
@@ -458,36 +458,6 @@ function! s:v_iline(item, opened) abort                                         
         \ )
 endfunction "  }}}2
 
-function! s:v_iline_with_line_number(item, opened) abort                                           " {{{2
-  " depricated
-  " compose item line for display
-  let pane_width = max([80, winwidth(winnr())])
-  let prefix_width = len(s:v.iline_prefix)
-  " TODO: remove magic number for priority symbo width
-  let priority_width = 4
-  let suffix_width = 1 + len(s:v.symbols.lnum) + 1 + s:v.max_lnum_width
-  let text_width = pane_width - prefix_width - priority_width - suffix_width - 3
-
-  " truncat text content if too long
-  if strdisplaywidth(a:item.text) > text_width
-    let text = a:item.text[ : text_width - 3 - 1] . '...'
-  else
-    let text = a:item.text
-  endif
-
-  let fmt = printf(' %%s %%-%dd', s:v.max_lnum_width)
-  let suffix_symbol = a:opened ? s:v.symbols.lnum_active : s:v.symbols.lnum_inactive
-  let suffix = printf(fmt, suffix_symbol, a:item.lnum)
-
-  " TODO!!!: move line number to line head
-  let fmt = printf('%%s%%s %%-%ds%%s', text_width)
-  return printf(fmt,
-        \ s:v.iline_prefix,
-        \ s:v.symbols[a:item.priority],
-        \ text,
-        \ suffix,
-        \ )
-endfunction "  }}}2
 function! s:v_iline_with_line_number(item, opened) abort                                           " {{{2
   " compose item line for display
   let pane_width = max([80, winwidth(winnr())])
